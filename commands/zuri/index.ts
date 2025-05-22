@@ -4,6 +4,7 @@ import * as path from 'path';
 
 interface Game {
     end_time: number;
+    time_class: string;  // Added for game type filtering
     white: {
         username: string;
         result: string;
@@ -43,6 +44,10 @@ async function getAllChessUsernames(): Promise<Map<string, string>> {
 
 export async function handleZuri(ctx: Context) {
     try {
+        // Parse command arguments
+        const args = ctx.message?.text?.split(' ') || [];
+        const option = args[1]?.toLowerCase();
+
         // Get all registered chess.com usernames
         const usernameMap = await getAllChessUsernames();
         if (usernameMap.size === 0) {
@@ -60,9 +65,18 @@ export async function handleZuri(ctx: Context) {
             });
         }
 
-        // Get current date and first day of the month
+        // Set date range based on command
         const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        let startDate: Date;
+        let title: string;
+
+        if (option === 'bugin') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            title = "🏆 Today's Leaderboard";
+        } else {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            title = "🏆 Monthly Leaderboard";
+        }
 
         // Fetch and process games for each player
         await Promise.all([...usernameMap.keys()].map(async (username) => {
@@ -83,10 +97,17 @@ export async function handleZuri(ctx: Context) {
                 // Process each game
                 games.forEach((game: Game) => {
                     const gameEndTime = new Date(game.end_time * 1000);
-                    if (gameEndTime >= firstDay) {
-                        const stats = processGame(game, username);
-                        updatePlayerStats(username, stats, playerStats);
+                    
+                    // Filter by date
+                    if (gameEndTime < startDate) return;
+
+                    // Filter by game type if specified
+                    if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
+                        return;
                     }
+
+                    const stats = processGame(game, username);
+                    updatePlayerStats(username, stats, playerStats);
                 });
             } catch (error) {
                 console.error(`Error processing games for ${username}:`, error);
@@ -99,13 +120,20 @@ export async function handleZuri(ctx: Context) {
             .filter(player => player.wins > 0 || player.losses > 0);
 
         if (sortedPlayers.length === 0) {
-            return ctx.reply("📊 No games found for any registered users this month.");
+            const timeFrame = option === 'bugin' ? 'today' : 'this month';
+            const gameType = ['blitz', 'bullet', 'rapid'].includes(option || '') ? ` for ${option} games` : '';
+            return ctx.reply(`📊 No games found${gameType} ${timeFrame}.`);
         }
 
         // Format response
+        let subtitle = '';
+        if (['blitz', 'bullet', 'rapid'].includes(option || '')) {
+            subtitle = `Game type: ${option}\n`;
+        }
+
         const response = [
-            "🏆 Leaderboard for this month:",
-            "",
+            title,
+            subtitle,
             ...sortedPlayers.map((player, index) => 
                 `${getPositionEmoji(index + 1)} @${player.username}: ${player.netWins >= 0 ? '+' : ''}${player.netWins} (W: ${player.wins} L: ${player.losses})`
             )
@@ -117,41 +145,41 @@ export async function handleZuri(ctx: Context) {
         console.error(err);
         ctx.reply("🚨 Error generating leaderboard.");
     }
+}
 
-    function processGame(game: Game, username: string): { wins: number; losses: number } {
-        const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
-        const playerResult = isWhite ? game.white.result : game.black.result;
-        const opponentResult = isWhite ? game.black.result : game.white.result;
+function processGame(game: Game, username: string): { wins: number; losses: number } {
+    const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
+    const playerResult = isWhite ? game.white.result : game.black.result;
+    const opponentResult = isWhite ? game.black.result : game.white.result;
 
-        let wins = 0;
-        let losses = 0;
+    let wins = 0;
+    let losses = 0;
 
-        if (playerResult === 'win' || opponentResult === 'resigned' || 
-            opponentResult === 'timeout' || opponentResult === 'abandoned') {
-            wins++;
-        } else if (opponentResult === 'win' || playerResult === 'resigned' || 
-                   playerResult === 'timeout' || playerResult === 'abandoned') {
-            losses++;
-        }
-
-        return { wins, losses };
+    if (playerResult === 'win' || opponentResult === 'resigned' || 
+        opponentResult === 'timeout' || opponentResult === 'abandoned') {
+        wins++;
+    } else if (opponentResult === 'win' || playerResult === 'resigned' || 
+               playerResult === 'timeout' || playerResult === 'abandoned') {
+        losses++;
     }
 
-    function updatePlayerStats(username: string, { wins, losses }: { wins: number; losses: number }, playerStats: Map<string, PlayerStats>) {
-        const stats = playerStats.get(username);
-        if (stats) {
-            stats.wins += wins;
-            stats.losses += losses;
-            stats.netWins = stats.wins - stats.losses;
-        }
-    }
+    return { wins, losses };
+}
 
-    function getPositionEmoji(position: number): string {
-        switch (position) {
-            case 1: return "🥇";
-            case 2: return "🥈";
-            case 3: return "🥉";
-            default: return `${position}.`;
-        }
+function updatePlayerStats(username: string, { wins, losses }: { wins: number; losses: number }, playerStats: Map<string, PlayerStats>) {
+    const stats = playerStats.get(username);
+    if (stats) {
+        stats.wins += wins;
+        stats.losses += losses;
+        stats.netWins = stats.wins - stats.losses;
+    }
+}
+
+function getPositionEmoji(position: number): string {
+    switch (position) {
+        case 1: return "🥇";
+        case 2: return "🥈";
+        case 3: return "🥉";
+        default: return `${position}.`;
     }
 } 
