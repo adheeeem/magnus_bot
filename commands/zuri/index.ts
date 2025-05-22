@@ -23,15 +23,15 @@ interface PlayerStats {
 // Store user mappings in a simple object
 // Key: Telegram username, Value: chess.com username
 const userMap: Record<string, string> = {
-    'adheeeem': 'azimjonfffff',
-    'RahNiz': 'rahniz90',
-    'shuhratrahmonov': 'RahmonovShuhrat',
-    'guaje032': 'aisoqov',
-    'Sanjar_Akhmedov': 'Akhmedov_Sanjar',
-    'komiljon_najmitdinov': 'knajmitdinov',
-    'Nuriddin_2004': 'nuriddin_yakubovich',
-    'alisherrik': 'Alisherrik'
-};
+    'azimjonfffff': 'adheeeem',
+    'rahniz90': 'RahNiz',
+    'RahmonovShuhrat': 'shuhratrahmonov',
+    'aisoqov': 'guaje032',
+    'Akhmedov_Sanjar': 'Sanjar_Akhmedov',
+    'knajmitdinov': 'komiljon_najmitdinov',
+    'nuriddin_yakubovich': 'Nuriddin_2004',
+    'Alisherrik': 'alisherrik'
+}
 
 const COMMAND_DESCRIPTIONS = {
     default: "Shows overall monthly leaderboard for all game types",
