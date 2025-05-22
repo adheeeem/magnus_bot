@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.21",
+    "@vercel/node": "^5.1.16",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }
