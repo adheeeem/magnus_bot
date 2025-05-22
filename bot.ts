@@ -3,6 +3,8 @@ import { Bot } from "grammy";
 import * as dotenv from "dotenv";
 import { handleStart } from "./commands/start";
 import { handleStats } from "./commands/stats";
+import { handleScore } from "./commands/score";
+import { handleZuri } from "./commands/zuri";
 
 dotenv.config();
 
@@ -12,4 +14,6 @@ if (!token) throw new Error("BOT_TOKEN is missing");
 export const bot = new Bot(token);
 
 bot.command("start", handleStart);
-bot.on("message:text", handleStats);
+bot.command("stats", handleStats);
+bot.command("score", handleScore);
+bot.command("zuri", handleZuri);
