@@ -1,4 +1,6 @@
 import { Context } from "grammy";
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 interface Rating {
   last?: { rating: number };
@@ -14,9 +16,33 @@ interface ChessStats {
 
 type RatingKey = "chess_rapid" | "chess_blitz" | "chess_bullet";
 
+const CSV_FILE = path.join(process.cwd(), 'users.csv');
+
 export async function handleStats(ctx: Context) {
-  const username = ctx.message?.text?.trim().toLowerCase();
-  if (!username) return;
+  // For /stats command without username, use the sender's username
+  let username = ctx.message?.text?.replace('/stats', '').trim().toLowerCase();
+  
+  if (!username) {
+    // If no username provided, try to get the sender's username
+    const telegramUsername = ctx.from?.username || String(ctx.from?.id);
+    try {
+      const content = await fs.readFile(CSV_FILE, 'utf-8');
+      const lines = content.split('\n');
+      for (const line of lines) {
+        const [tgUsername, chessUsername] = line.split(',');
+        if (tgUsername === telegramUsername) {
+          username = chessUsername.trim();
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('Error reading CSV:', err);
+    }
+    
+    if (!username) {
+      return ctx.reply("⚠️ Please provide a Chess.com username or register using /start first.");
+    }
+  }
 
   try {
     const res = await fetch(`https://api.chess.com/pub/player/${username}/stats`);

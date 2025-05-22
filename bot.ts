@@ -18,5 +18,10 @@ bot.command("stats", handleStats);
 bot.command("score", handleScore);
 bot.command("zuri", handleZuri);
 
-// Handle text messages for username registration
-bot.on("message:text", handleUsername);
+// Handle text messages for username registration only in private chats
+bot.on("message:text", async (ctx) => {
+  // Only process text messages in private chats
+  if (ctx.chat?.type === "private") {
+    await handleUsername(ctx);
+  }
+});
