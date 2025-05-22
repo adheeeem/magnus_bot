@@ -1,10 +1,8 @@
 import { Context } from "grammy";
-import * as fs from 'fs/promises';
-import * as path from 'path';
 
 interface Game {
     end_time: number;
-    time_class: string;  // Added for game type filtering
+    time_class: string;
     white: {
         username: string;
         result: string;
@@ -22,24 +20,39 @@ interface PlayerStats {
     netWins: number;
 }
 
-const CSV_FILE = path.join(process.cwd(), 'users.csv');
+// Store user mappings in a simple object
+// Key: chess.com username, Value: Telegram username
+const userMap: Record<string, string> = {
+    'azimjonfffff': 'adheeeem',
+    'rahniz90': 'RahNiz',
+    'RahmonovShuhrat': 'shuhratrahmonov',
+    'aisoqov': 'guaje032',
+    'Akhmedov_Sanjar': 'Sanjar_Akhmedov',
+    'knajmitdinov': 'komiljon_najmitdinov',
+    'nuriddin_yakubovich': 'Nuriddin_2004',
+    'Alisherrik': 'alisherrik',
+};
 
-async function getAllChessUsernames(): Promise<Map<string, string>> {
-    try {
-        const content = await fs.readFile(CSV_FILE, 'utf-8');
-        const lines = content.split('\n').filter(line => line.trim());
-        const usernameMap = new Map<string, string>();
-        
-        for (const line of lines) {
-            const [tgUsername, chessUsername] = line.split(',');
-            if (tgUsername && chessUsername) {
-                usernameMap.set(chessUsername.trim(), tgUsername.trim());
-            }
-        }
-        return usernameMap;
-    } catch {
-        return new Map();
-    }
+const COMMAND_DESCRIPTIONS = {
+    default: "Shows overall monthly leaderboard for all game types",
+    bugin: "Shows today's top players across all game types",
+    blitz: "Shows monthly leaderboard for blitz games (3-5 minutes)",
+    bullet: "Shows monthly leaderboard for bullet games (1-2 minutes)",
+    rapid: "Shows monthly leaderboard for rapid games (10+ minutes)"
+};
+
+function getCommandHelp(): string {
+    return [
+        "📋 Available /zuri commands:",
+        "",
+        "🎮 /zuri - " + COMMAND_DESCRIPTIONS.default,
+        "🌅 /zuri bugin - " + COMMAND_DESCRIPTIONS.bugin,
+        "⚡ /zuri blitz - " + COMMAND_DESCRIPTIONS.blitz,
+        "🔫 /zuri bullet - " + COMMAND_DESCRIPTIONS.bullet,
+        "🏃 /zuri rapid - " + COMMAND_DESCRIPTIONS.rapid,
+        "",
+        "Use any command to see the corresponding leaderboard!"
+    ].join('\n');
 }
 
 export async function handleZuri(ctx: Context) {
@@ -48,15 +61,19 @@ export async function handleZuri(ctx: Context) {
         const args = ctx.message?.text?.split(' ') || [];
         const option = args[1]?.toLowerCase();
 
-        // Get all registered chess.com usernames
-        const usernameMap = await getAllChessUsernames();
-        if (usernameMap.size === 0) {
-            return ctx.reply("⚠️ No registered users found. Users should use /start first.");
+        // Show help if "help" is requested
+        if (option === 'help') {
+            return ctx.reply(getCommandHelp());
+        }
+
+        // Check if we have any registered users
+        if (Object.keys(userMap).length === 0) {
+            return ctx.reply("⚠️ No registered users found.");
         }
 
         // Initialize stats for all players
         const playerStats = new Map<string, PlayerStats>();
-        for (const [chessUsername, tgUsername] of usernameMap) {
+        for (const [chessUsername, tgUsername] of Object.entries(userMap)) {
             playerStats.set(chessUsername, {
                 username: tgUsername,
                 wins: 0,
@@ -69,17 +86,20 @@ export async function handleZuri(ctx: Context) {
         const now = new Date();
         let startDate: Date;
         let title: string;
+        let description: string;
 
         if (option === 'bugin') {
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             title = "🏆 Today's Leaderboard";
+            description = COMMAND_DESCRIPTIONS.bugin;
         } else {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             title = "🏆 Monthly Leaderboard";
+            description = option ? COMMAND_DESCRIPTIONS[option as keyof typeof COMMAND_DESCRIPTIONS] : COMMAND_DESCRIPTIONS.default;
         }
 
         // Fetch and process games for each player
-        await Promise.all([...usernameMap.keys()].map(async (username) => {
+        await Promise.all(Object.keys(userMap).map(async (username) => {
             try {
                 // Get archives
                 const archivesRes = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`);
@@ -122,28 +142,26 @@ export async function handleZuri(ctx: Context) {
         if (sortedPlayers.length === 0) {
             const timeFrame = option === 'bugin' ? 'today' : 'this month';
             const gameType = ['blitz', 'bullet', 'rapid'].includes(option || '') ? ` for ${option} games` : '';
-            return ctx.reply(`📊 No games found${gameType} ${timeFrame}.`);
+            return ctx.reply(`📊 No games found${gameType} ${timeFrame}.\n\nType /zuri help to see all available commands.`);
         }
 
-        // Format response
-        let subtitle = '';
-        if (['blitz', 'bullet', 'rapid'].includes(option || '')) {
-            subtitle = `Game type: ${option}\n`;
-        }
-
+        // Format response without @ symbol
         const response = [
             title,
-            subtitle,
+            description,
+            "",
             ...sortedPlayers.map((player, index) => 
-                `${getPositionEmoji(index + 1)} @${player.username}: ${player.netWins >= 0 ? '+' : ''}${player.netWins} (W: ${player.wins} L: ${player.losses})`
-            )
+                `${getPositionEmoji(index + 1)} ${player.username}: ${player.netWins >= 0 ? '+' : ''}${player.netWins} (W: ${player.wins} L: ${player.losses})`
+            ),
+            "",
+            "Type /zuri help to see all available commands."
         ].join('\n');
 
         await ctx.reply(response);
 
     } catch (err) {
         console.error(err);
-        ctx.reply("🚨 Error generating leaderboard.");
+        ctx.reply("🚨 Error generating leaderboard. Type /zuri help to see available commands.");
     }
 }
 
