@@ -1,7 +1,4 @@
 {
-  "includeFiles": [
-    "users.csv"
-  ],
   "routes": [
     {
       "src": "/webhook",
