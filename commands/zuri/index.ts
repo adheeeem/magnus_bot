@@ -21,16 +21,16 @@ interface PlayerStats {
 }
 
 // Store user mappings in a simple object
-// Key: chess.com username, Value: Telegram username
+// Key: Telegram username, Value: chess.com username
 const userMap: Record<string, string> = {
-    'azimjonfffff': 'adheeeem',
-    'rahniz90': 'RahNiz',
-    'RahmonovShuhrat': 'shuhratrahmonov',
-    'aisoqov': 'guaje032',
-    'Akhmedov_Sanjar': 'Sanjar_Akhmedov',
-    'knajmitdinov': 'komiljon_najmitdinov',
-    'nuriddin_yakubovich': 'Nuriddin_2004',
-    'Alisherrik': 'alisherrik',
+    'adheeeem': 'azimjonfffff',
+    'RahNiz': 'rahniz90',
+    'shuhratrahmonov': 'RahmonovShuhrat',
+    'guaje032': 'aisoqov',
+    'Sanjar_Akhmedov': 'Akhmedov_Sanjar',
+    'komiljon_najmitdinov': 'knajmitdinov',
+    'Nuriddin_2004': 'nuriddin_yakubovich',
+    'alisherrik': 'Alisherrik'
 };
 
 const COMMAND_DESCRIPTIONS = {
@@ -73,7 +73,7 @@ export async function handleZuri(ctx: Context) {
 
         // Initialize stats for all players
         const playerStats = new Map<string, PlayerStats>();
-        for (const [chessUsername, tgUsername] of Object.entries(userMap)) {
+        for (const [tgUsername, chessUsername] of Object.entries(userMap)) {
             playerStats.set(chessUsername, {
                 username: tgUsername,
                 wins: 0,
@@ -99,10 +99,10 @@ export async function handleZuri(ctx: Context) {
         }
 
         // Fetch and process games for each player
-        await Promise.all(Object.keys(userMap).map(async (username) => {
+        await Promise.all(Object.values(userMap).map(async (chessUsername) => {
             try {
                 // Get archives
-                const archivesRes = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`);
+                const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
                 if (!archivesRes.ok) return;
                 
                 const archives = await archivesRes.json();
@@ -126,11 +126,11 @@ export async function handleZuri(ctx: Context) {
                         return;
                     }
 
-                    const stats = processGame(game, username);
-                    updatePlayerStats(username, stats, playerStats);
+                    const stats = processGame(game, chessUsername);
+                    updatePlayerStats(chessUsername, stats, playerStats);
                 });
             } catch (error) {
-                console.error(`Error processing games for ${username}:`, error);
+                console.error(`Error processing games for ${chessUsername}:`, error);
             }
         }));
 
