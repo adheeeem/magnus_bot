@@ -30,26 +30,65 @@ bot.on("message:text", async (ctx) => {
 // Global error handler
 bot.catch((err: BotError) => {
   const ctx = err.ctx;
-  console.error(`Error while handling update ${ctx.update.update_id}:`);
+  const errorContext = {
+    updateId: ctx.update.update_id,
+    userId: ctx.from?.id,
+    chatId: ctx.chat?.id,
+    timestamp: new Date().toISOString()
+  };
   
   if (err.error instanceof GrammyError) {
     // Handle specific Telegram API errors
     if (err.error.description.includes("Forbidden: bot was blocked by the user")) {
-      console.log(`Bot was blocked by user ${ctx.from?.id}`);
-      // You could add additional logic here, like removing the user from your database
+      console.log(JSON.stringify({
+        level: "warn",
+        type: "bot_blocked",
+        message: `Bot was blocked by user ${ctx.from?.id}`,
+        ...errorContext,
+        error: err.error.description
+      }));
     } else if (err.error.description.includes("Too Many Requests")) {
-      console.log("Rate limit exceeded:", err.error.description);
-      // You could add retry logic here
+      console.log(JSON.stringify({
+        level: "warn",
+        type: "rate_limit",
+        message: "Rate limit exceeded",
+        ...errorContext,
+        error: err.error.description
+      }));
     } else if (err.error.description.includes("Bad Request")) {
-      console.log("Bad request error:", err.error.description);
+      console.log(JSON.stringify({
+        level: "error",
+        type: "bad_request",
+        message: "Bad request error",
+        ...errorContext,
+        error: err.error.description
+      }));
     } else {
-      console.log("Other Telegram API error:", err.error.description);
+      console.log(JSON.stringify({
+        level: "error",
+        type: "telegram_api_error",
+        message: "Other Telegram API error",
+        ...errorContext,
+        error: err.error.description
+      }));
     }
   } else if (err.error instanceof HttpError) {
     // Handle network errors
-    console.error("HTTP error:", err.error.message);
+    console.log(JSON.stringify({
+      level: "error",
+      type: "network_error",
+      message: "HTTP error occurred",
+      ...errorContext,
+      error: err.error.message
+    }));
   } else {
     // Handle non-Telegram API errors
-    console.error("Unknown error:", err.error);
+    console.log(JSON.stringify({
+      level: "error",
+      type: "unknown_error",
+      message: "Unknown error occurred",
+      ...errorContext,
+      error: String(err.error)
+    }));
   }
 });
