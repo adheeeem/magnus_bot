@@ -83,18 +83,25 @@ export async function handleZuri(ctx: Context) {
         }
 
         // Set date range based on command with GMT+5 timezone offset
-        const now = new Date();
         const timezoneOffset = 5; // GMT+5
-        now.setHours(now.getHours() + timezoneOffset); // Adjust to GMT+5
-
+        const now = new Date();
+        
         let startDate: Date;
         let title: string;
         let description: string;
 
         if (option === 'bugin') {
-            // Set to start of day in GMT+5
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            startDate.setHours(-timezoneOffset, 0, 0, 0); // Convert back to UTC for comparison
+            // Calculate start of today in GMT+5
+            const todayGMT5 = new Date(now.getTime() + (timezoneOffset * 60 * 60 * 1000));
+            startDate = new Date(
+                todayGMT5.getFullYear(),
+                todayGMT5.getMonth(),
+                todayGMT5.getDate(),
+                -timezoneOffset, // This sets it to 00:00 GMT+5 in UTC time
+                0,
+                0,
+                0
+            );
             title = "🏆 Today's Leaderboard";
             description = COMMAND_DESCRIPTIONS.bugin;
         } else {
@@ -121,12 +128,12 @@ export async function handleZuri(ctx: Context) {
                 
                 // Process each game
                 games.forEach((game: Game) => {
-                    const gameEndTime = new Date(game.end_time * 1000);
-                    // Adjust game end time to GMT+5
-                    gameEndTime.setHours(gameEndTime.getHours() + timezoneOffset);
+                    // Convert game end time to GMT+5
+                    const gameEndTimeUTC = new Date(game.end_time * 1000);
+                    const gameEndTimeGMT5 = new Date(gameEndTimeUTC.getTime() + (timezoneOffset * 60 * 60 * 1000));
                     
                     // Filter by date
-                    if (gameEndTime < startDate) return;
+                    if (gameEndTimeGMT5 < startDate) return;
 
                     // Filter by game type if specified
                     if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
