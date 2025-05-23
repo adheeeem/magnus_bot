@@ -113,6 +113,7 @@ export async function handleZuri(ctx: Context) {
         if (option === 'bugin') {
             // Get start of today in Tajikistan time
             startDate = getStartOfDayTajikistan(now);
+            console.log("startDate", startDate);
             title = "🏆 Today's Leaderboard";
             description = COMMAND_DESCRIPTIONS.bugin;
         } else {
