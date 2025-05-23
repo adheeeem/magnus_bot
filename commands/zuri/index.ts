@@ -65,13 +65,16 @@ function getTajikistanTime(date: Date): Date {
 
 // Helper function to get start of day in Tajikistan time
 function getStartOfDayTajikistan(date: Date): Date {
+    // First convert to Tajikistan time to get the correct date
     const tajikTime = getTajikistanTime(date);
-    // Create UTC date for 00:00 Tajikistan time
+    
+    // Then create a UTC date that represents 00:00 Tajikistan time
+    // For GMT+5, this means 19:00 UTC of the previous day
     return new Date(Date.UTC(
         tajikTime.getFullYear(),
         tajikTime.getMonth(),
         tajikTime.getDate(),
-        -5, // 00:00 Tajikistan time in UTC
+        19,  // 19:00 UTC = 00:00 GMT+5 next day
         0,
         0,
         0
