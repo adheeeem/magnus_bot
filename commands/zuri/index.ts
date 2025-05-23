@@ -82,14 +82,19 @@ export async function handleZuri(ctx: Context) {
             });
         }
 
-        // Set date range based on command
+        // Set date range based on command with GMT+5 timezone offset
         const now = new Date();
+        const timezoneOffset = 5; // GMT+5
+        now.setHours(now.getHours() + timezoneOffset); // Adjust to GMT+5
+
         let startDate: Date;
         let title: string;
         let description: string;
 
         if (option === 'bugin') {
+            // Set to start of day in GMT+5
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            startDate.setHours(-timezoneOffset, 0, 0, 0); // Convert back to UTC for comparison
             title = "🏆 Today's Leaderboard";
             description = COMMAND_DESCRIPTIONS.bugin;
         } else {
@@ -117,6 +122,8 @@ export async function handleZuri(ctx: Context) {
                 // Process each game
                 games.forEach((game: Game) => {
                     const gameEndTime = new Date(game.end_time * 1000);
+                    // Adjust game end time to GMT+5
+                    gameEndTime.setHours(gameEndTime.getHours() + timezoneOffset);
                     
                     // Filter by date
                     if (gameEndTime < startDate) return;
