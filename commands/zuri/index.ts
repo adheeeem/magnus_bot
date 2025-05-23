@@ -69,11 +69,11 @@ function getStartOfDayTajikistan(date: Date): Date {
     const tajikTime = getTajikistanTime(date);
     
     // Then create a UTC date that represents 00:00 Tajikistan time
-    // For GMT+5, this means 19:00 UTC of the previous day
+    // We need to subtract one day since we want 19:00 UTC of the PREVIOUS day
     return new Date(Date.UTC(
         tajikTime.getFullYear(),
         tajikTime.getMonth(),
-        tajikTime.getDate(),
+        tajikTime.getDate() - 1, // Subtract one day to get previous day's 19:00 UTC
         19,  // 19:00 UTC = 00:00 GMT+5 next day
         0,
         0,
