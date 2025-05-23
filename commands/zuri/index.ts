@@ -107,6 +107,37 @@ function getStartOfDayTajikistan(date: Date): Date {
     return new Date(tajikMidnight.getTime() - (5 * 60 * 60 * 1000));
 }
 
+// Add retry logic for API calls
+async function fetchWithRetry(url: string, retries = 3, delay = 1000): Promise<Response> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                return response;
+            }
+            
+            // If we get a 429 (Too Many Requests), wait longer
+            if (response.status === 429) {
+                const retryAfter = parseInt(response.headers.get('retry-after') || '60');
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                continue;
+            }
+            
+            // If we get a 403, wait and retry
+            if (response.status === 403) {
+                await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+                continue;
+            }
+
+            throw new Error(`HTTP error! status: ${response.status}`);
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        }
+    }
+    throw new Error('Max retries reached');
+}
+
 async function fetchTodaysGames(username: string): Promise<ExtendedGame[]> {
     const today = new Date();
     const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
@@ -114,10 +145,7 @@ async function fetchTodaysGames(username: string): Promise<ExtendedGame[]> {
     const url = `https://www.chess.com/callback/games/extended-archive?locale=en_US&username=${username}&endDate[date]=${dateStr}&startDate[date]=${dateStr}&timeSort=desc&location=all`;
     
     try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await fetchWithRetry(url);
         const data: ExtendedArchiveResponse = await response.json();
         return data.data;
     } catch (error) {
@@ -177,20 +205,23 @@ export async function handleZuri(ctx: Context) {
             title = "🏆 Today's Leaderboard";
             description = COMMAND_DESCRIPTIONS.bugun;
 
-            // Fetch today's games for all players using the new API
-            await Promise.all(Object.values(userMap).map(async (chessUsername) => {
+            // Add delay between requests to avoid rate limiting
+            const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            
+            // Process users sequentially with delay to avoid rate limits
+            for (const chessUsername of Object.values(userMap)) {
                 try {
                     const games = await fetchTodaysGames(chessUsername);
-                    
-                    // Process each game
                     games.forEach(game => {
                         const stats = processExtendedGame(game, chessUsername);
                         updatePlayerStats(chessUsername, stats, playerStats);
                     });
+                    // Add a small delay between requests
+                    await delay(500);
                 } catch (error) {
                     console.error(`Error processing games for ${chessUsername}:`, error);
                 }
-            }));
+            }
         } else {
             // Get start of month in Tajikistan time
             const tajikTime = getTajikistanTime(new Date());
@@ -206,17 +237,20 @@ export async function handleZuri(ctx: Context) {
             title = "🏆 Monthly Leaderboard";
             description = option ? COMMAND_DESCRIPTIONS[option as keyof typeof COMMAND_DESCRIPTIONS] : COMMAND_DESCRIPTIONS.default;
 
-            // Fetch and process games for each player using the old API
-            await Promise.all(Object.values(userMap).map(async (chessUsername) => {
+            // Process users sequentially with delay to avoid rate limits
+            for (const chessUsername of Object.values(userMap)) {
                 try {
-                    const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
-                    if (!archivesRes.ok) return;
+                    const archivesRes = await fetchWithRetry(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
+                    if (!archivesRes.ok) continue;
 
                     const archives = await archivesRes.json();
                     const currentMonth = archives.archives[archives.archives.length - 1];
 
-                    const gamesRes = await fetch(currentMonth);
-                    if (!gamesRes.ok) return;
+                    // Add delay between requests
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    const gamesRes = await fetchWithRetry(currentMonth);
+                    if (!gamesRes.ok) continue;
 
                     const { games } = await gamesRes.json();
 
@@ -236,7 +270,7 @@ export async function handleZuri(ctx: Context) {
                 } catch (error) {
                     console.error(`Error processing games for ${chessUsername}:`, error);
                 }
-            }));
+            }
         }
 
         // Sort players by net wins
@@ -266,7 +300,7 @@ export async function handleZuri(ctx: Context) {
 
     } catch (err) {
         console.error(err);
-        ctx.reply("🚨 Error generating leaderboard. Type /zuri help to see available commands.");
+        ctx.reply("🚨 Error generating leaderboard. Type /zuri help to see all available commands.");
     }
 }
 
