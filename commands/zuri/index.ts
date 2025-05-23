@@ -116,7 +116,7 @@ export async function handleZuri(ctx: Context) {
             // Get start of today in Tajikistan time
             startDate = getStartOfDayTajikistan(now);
             const tajikNow = getTajikistanTime(now);
-            
+
             console.log('[Debug] Timezone info:', {
                 serverTime: now.toISOString(),
                 tajikistanTime: tajikNow.toISOString(),
@@ -147,7 +147,7 @@ export async function handleZuri(ctx: Context) {
                 // Get archives
                 const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
                 if (!archivesRes.ok) return;
-                
+
                 const archives = await archivesRes.json();
                 const currentMonth = archives.archives[archives.archives.length - 1];
 
@@ -156,15 +156,22 @@ export async function handleZuri(ctx: Context) {
                 if (!gamesRes.ok) return;
 
                 const { games } = await gamesRes.json();
-                
+
                 // Process each game
                 games.forEach((game: Game) => {
                     // Convert game end time to Tajikistan time for comparison
                     const gameEndTimeUTC = new Date(game.end_time * 1000);
                     const gameEndTimeTajikistan = getTajikistanTime(gameEndTimeUTC);
-                    
-                    // Filter by date
-                    if (gameEndTimeTajikistan < startDate) return;
+
+                    // If 'bugin', compare full date string
+                    if (option === 'bugin') {
+                        const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
+                        const todayDateStr = getTajikistanTime(now).toISOString().split('T')[0];
+                        if (gameDateStr !== todayDateStr) return;
+                    } else {
+                        // Monthly filter by Tajikistan time
+                        if (gameEndTimeTajikistan < startDate) return;
+                    }
 
                     // Filter by game type if specified
                     if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
@@ -204,7 +211,7 @@ export async function handleZuri(ctx: Context) {
             title,
             description,
             "",
-            ...sortedPlayers.map((player, index) => 
+            ...sortedPlayers.map((player, index) =>
                 `${getPositionEmoji(index + 1)} ${player.username}: ${player.netWins >= 0 ? '+' : ''}${player.netWins} (W: ${player.wins} L: ${player.losses})`
             ),
             "",
@@ -227,11 +234,11 @@ function processGame(game: Game, username: string): { wins: number; losses: numb
     let wins = 0;
     let losses = 0;
 
-    if (playerResult === 'win' || opponentResult === 'resigned' || 
+    if (playerResult === 'win' || opponentResult === 'resigned' ||
         opponentResult === 'timeout' || opponentResult === 'abandoned') {
         wins++;
-    } else if (opponentResult === 'win' || playerResult === 'resigned' || 
-               playerResult === 'timeout' || playerResult === 'abandoned') {
+    } else if (opponentResult === 'win' || playerResult === 'resigned' ||
+        playerResult === 'timeout' || playerResult === 'abandoned') {
         losses++;
     }
 
