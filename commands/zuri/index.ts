@@ -55,6 +55,29 @@ function getCommandHelp(): string {
     ].join('\n');
 }
 
+// Helper function to get Tajikistan time (GMT+5)
+function getTajikistanTime(date: Date): Date {
+    // Get the UTC timestamp
+    const utcTime = date.getTime();
+    // Convert to Tajikistan time (GMT+5)
+    return new Date(utcTime + (5 * 60 * 60 * 1000));
+}
+
+// Helper function to get start of day in Tajikistan time
+function getStartOfDayTajikistan(date: Date): Date {
+    const tajikTime = getTajikistanTime(date);
+    // Create UTC date for 00:00 Tajikistan time
+    return new Date(Date.UTC(
+        tajikTime.getFullYear(),
+        tajikTime.getMonth(),
+        tajikTime.getDate(),
+        -5, // 00:00 Tajikistan time in UTC
+        0,
+        0,
+        0
+    ));
+}
+
 export async function handleZuri(ctx: Context) {
     try {
         // Parse command arguments
@@ -82,30 +105,28 @@ export async function handleZuri(ctx: Context) {
             });
         }
 
-        // Set date range based on command with GMT+5 timezone offset
-        const timezoneOffset = 5; // GMT+5
         const now = new Date();
-        
         let startDate: Date;
         let title: string;
         let description: string;
 
         if (option === 'bugin') {
-            // Calculate start of today in GMT+5
-            const todayGMT5 = new Date(now.getTime() + (timezoneOffset * 60 * 60 * 1000));
-            startDate = new Date(
-                todayGMT5.getFullYear(),
-                todayGMT5.getMonth(),
-                todayGMT5.getDate(),
-                -timezoneOffset, // This sets it to 00:00 GMT+5 in UTC time
-                0,
-                0,
-                0
-            );
+            // Get start of today in Tajikistan time
+            startDate = getStartOfDayTajikistan(now);
             title = "🏆 Today's Leaderboard";
             description = COMMAND_DESCRIPTIONS.bugin;
         } else {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            // Get start of month in Tajikistan time
+            const tajikTime = getTajikistanTime(now);
+            startDate = new Date(Date.UTC(
+                tajikTime.getFullYear(),
+                tajikTime.getMonth(),
+                1,
+                -5, // 00:00 Tajikistan time in UTC
+                0,
+                0,
+                0
+            ));
             title = "🏆 Monthly Leaderboard";
             description = option ? COMMAND_DESCRIPTIONS[option as keyof typeof COMMAND_DESCRIPTIONS] : COMMAND_DESCRIPTIONS.default;
         }
@@ -128,12 +149,12 @@ export async function handleZuri(ctx: Context) {
                 
                 // Process each game
                 games.forEach((game: Game) => {
-                    // Convert game end time to GMT+5
+                    // Convert game end time to Tajikistan time for comparison
                     const gameEndTimeUTC = new Date(game.end_time * 1000);
-                    const gameEndTimeGMT5 = new Date(gameEndTimeUTC.getTime() + (timezoneOffset * 60 * 60 * 1000));
+                    const gameEndTimeTajikistan = getTajikistanTime(gameEndTimeUTC);
                     
                     // Filter by date
-                    if (gameEndTimeGMT5 < startDate) return;
+                    if (gameEndTimeTajikistan < startDate) return;
 
                     // Filter by game type if specified
                     if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
