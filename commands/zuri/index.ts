@@ -83,7 +83,7 @@ export async function handleZuri(ctx: Context) {
     try {
         // Parse command arguments
         const args = ctx.message?.text?.split(' ') || [];
-        const option = args[1]?.toLowerCase();
+        const option = args[1]?.toLowerCase() || 'bugun'; // Set 'bugun' as default when no argument provided
 
         // Show help if "help" is requested
         if (option === 'help') {
