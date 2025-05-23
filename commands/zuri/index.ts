@@ -65,20 +65,18 @@ function getTajikistanTime(date: Date): Date {
 
 // Helper function to get start of day in Tajikistan time
 function getStartOfDayTajikistan(date: Date): Date {
-    // First convert to Tajikistan time to get the correct date
     const tajikTime = getTajikistanTime(date);
-    
-    // Then create a UTC date that represents 00:00 Tajikistan time
-    // We need to subtract one day since we want 19:00 UTC of the PREVIOUS day
-    return new Date(Date.UTC(
+
+    // Create 00:00 Tajikistan time today and convert back to UTC
+    const tajikMidnight = new Date(
         tajikTime.getFullYear(),
         tajikTime.getMonth(),
-        tajikTime.getDate() - 1, // Subtract one day to get previous day's 19:00 UTC
-        19,  // 19:00 UTC = 00:00 GMT+5 next day
-        0,
-        0,
-        0
-    ));
+        tajikTime.getDate(),
+        0, 0, 0, 0
+    );
+
+    // Convert to UTC by subtracting 5 hours
+    return new Date(tajikMidnight.getTime() - (5 * 60 * 60 * 1000));
 }
 
 export async function handleZuri(ctx: Context) {
