@@ -13,6 +13,34 @@ interface Game {
     };
 }
 
+interface ExtendedGame {
+    id: number;
+    baseTime1: number;
+    timeIncrement: number;
+    user1Rating: number;
+    user2Rating: number;
+    user1Result: number;
+    user2Result: number;
+    gameTimeClass: string;
+    user1: {
+        id: number;
+        username: string;
+    };
+    user2: {
+        id: number;
+        username: string;
+    };
+    isTimeout: boolean;
+    gameEndTime: string;
+}
+
+interface ExtendedArchiveResponse {
+    data: ExtendedGame[];
+    meta: {
+        totalCount: number;
+    };
+}
+
 interface PlayerStats {
     username: string;
     wins: number;
@@ -35,7 +63,7 @@ const userMap: Record<string, string> = {
 
 const COMMAND_DESCRIPTIONS = {
     default: "Shows overall monthly leaderboard for all game types",
-    bugin: "Shows today's top players across all game types",
+    bugun: "Shows today's top players across all game types",
     blitz: "Shows monthly leaderboard for blitz games (3-5 minutes)",
     bullet: "Shows monthly leaderboard for bullet games (1-2 minutes)",
     rapid: "Shows monthly leaderboard for rapid games (10+ minutes)"
@@ -46,7 +74,7 @@ function getCommandHelp(): string {
         "📋 Available /zuri commands:",
         "",
         "🎮 /zuri - " + COMMAND_DESCRIPTIONS.default,
-        "🌅 /zuri bugin - " + COMMAND_DESCRIPTIONS.bugin,
+        "🌅 /zuri bugun - " + COMMAND_DESCRIPTIONS.bugun,
         "⚡ /zuri blitz - " + COMMAND_DESCRIPTIONS.blitz,
         "🔫 /zuri bullet - " + COMMAND_DESCRIPTIONS.bullet,
         "🏃 /zuri rapid - " + COMMAND_DESCRIPTIONS.rapid,
@@ -79,6 +107,42 @@ function getStartOfDayTajikistan(date: Date): Date {
     return new Date(tajikMidnight.getTime() - (5 * 60 * 60 * 1000));
 }
 
+async function fetchTodaysGames(username: string): Promise<ExtendedGame[]> {
+    const today = new Date();
+    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+    
+    const url = `https://www.chess.com/callback/games/extended-archive?locale=en_US&username=${username}&endDate[date]=${dateStr}&startDate[date]=${dateStr}&timeSort=desc&location=all`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: ExtendedArchiveResponse = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error(`Error fetching games for ${username}:`, error);
+        return [];
+    }
+}
+
+function processExtendedGame(game: ExtendedGame, username: string): { wins: number; losses: number } {
+    const isUser1 = game.user1.username.toLowerCase() === username.toLowerCase();
+    const userResult = isUser1 ? game.user1Result : game.user2Result;
+    
+    let wins = 0;
+    let losses = 0;
+
+    if (userResult === 1.0) {
+        wins++;
+    } else if (userResult === 0.0) {
+        losses++;
+    }
+    // Draw (0.5) is not counted
+
+    return { wins, losses };
+}
+
 export async function handleZuri(ctx: Context) {
     try {
         // Parse command arguments
@@ -106,94 +170,74 @@ export async function handleZuri(ctx: Context) {
             });
         }
 
-        const now = new Date();
-        console.log('[Debug] Server time (UTC):', now.toISOString());
-        let startDate: Date;
         let title: string;
         let description: string;
 
-        if (option === 'bugin') {
-            // Get start of today in Tajikistan time
-            startDate = getStartOfDayTajikistan(now);
-            const tajikNow = getTajikistanTime(now);
-
-            console.log('[Debug] Timezone info:', {
-                serverTime: now.toISOString(),
-                tajikistanTime: tajikNow.toISOString(),
-                startDate: startDate.toISOString(),
-                filterCutoff: startDate.toUTCString()
-            });
+        if (option === 'bugun') {
             title = "🏆 Today's Leaderboard";
-            description = COMMAND_DESCRIPTIONS.bugin;
+            description = COMMAND_DESCRIPTIONS.bugun;
+
+            // Fetch today's games for all players using the new API
+            await Promise.all(Object.values(userMap).map(async (chessUsername) => {
+                try {
+                    const games = await fetchTodaysGames(chessUsername);
+                    
+                    // Process each game
+                    games.forEach(game => {
+                        const stats = processExtendedGame(game, chessUsername);
+                        updatePlayerStats(chessUsername, stats, playerStats);
+                    });
+                } catch (error) {
+                    console.error(`Error processing games for ${chessUsername}:`, error);
+                }
+            }));
         } else {
             // Get start of month in Tajikistan time
-            const tajikTime = getTajikistanTime(now);
-            startDate = new Date(Date.UTC(
+            const tajikTime = getTajikistanTime(new Date());
+            const startDate = new Date(Date.UTC(
                 tajikTime.getFullYear(),
                 tajikTime.getMonth(),
                 1,
-                -5, // 00:00 Tajikistan time in UTC
+                -5,
                 0,
                 0,
                 0
             ));
             title = "🏆 Monthly Leaderboard";
             description = option ? COMMAND_DESCRIPTIONS[option as keyof typeof COMMAND_DESCRIPTIONS] : COMMAND_DESCRIPTIONS.default;
-        }
 
-        // Fetch and process games for each player
-        await Promise.all(Object.values(userMap).map(async (chessUsername) => {
-            try {
-                // Get archives
-                const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
-                if (!archivesRes.ok) return;
+            // Fetch and process games for each player using the old API
+            await Promise.all(Object.values(userMap).map(async (chessUsername) => {
+                try {
+                    const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
+                    if (!archivesRes.ok) return;
 
-                const archives = await archivesRes.json();
-                const currentMonth = archives.archives[archives.archives.length - 1];
+                    const archives = await archivesRes.json();
+                    const currentMonth = archives.archives[archives.archives.length - 1];
 
-                // Get games from current month
-                const gamesRes = await fetch(currentMonth);
-                if (!gamesRes.ok) return;
+                    const gamesRes = await fetch(currentMonth);
+                    if (!gamesRes.ok) return;
 
-                const { games } = await gamesRes.json();
+                    const { games } = await gamesRes.json();
 
-                // Process each game
-                games.forEach((game: Game) => {
-                    // Convert game end time to Tajikistan time for comparison
-                    const gameEndTimeUTC = new Date(game.end_time * 1000);
-                    const gameEndTimeTajikistan = getTajikistanTime(gameEndTimeUTC);
+                    games.forEach((game: Game) => {
+                        const gameEndTimeUTC = new Date(game.end_time * 1000);
+                        const gameEndTimeTajikistan = getTajikistanTime(gameEndTimeUTC);
 
-                    // If 'bugin', compare full date string
-                    if (option === 'bugin') {
-                        const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
-                        const todayDateStr = getTajikistanTime(now).toISOString().split('T')[0];
-                        if (gameDateStr !== todayDateStr) return;
-                    } else {
-                        // Monthly filter by Tajikistan time
                         if (gameEndTimeTajikistan < startDate) return;
-                    }
 
-                    // Filter by game type if specified
-                    if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
-                        return;
-                    }
+                        if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
+                            return;
+                        }
 
-                    if (option === 'bugin') {
-                        console.log('[Debug] Game time info:', {
-                            player: chessUsername,
-                            gameEndUTC: gameEndTimeUTC.toISOString(),
-                            gameEndTajikistan: gameEndTimeTajikistan.toISOString(),
-                            isIncluded: gameEndTimeTajikistan >= startDate
-                        });
-                    }
-
-                    const stats = processGame(game, chessUsername);
-                    updatePlayerStats(chessUsername, stats, playerStats);
-                });
-            } catch (error) {
-                console.error(`Error processing games for ${chessUsername}:`, error);
-            }
-        }));
+                        const stats = processGame(game, chessUsername);
+                        updatePlayerStats(chessUsername, stats, playerStats);
+                    });
+                } catch (error) {
+                    console.error(`Error processing games for ${chessUsername}:`, error);
+                }
+            }));
+        }
 
         // Sort players by net wins
         const sortedPlayers = [...playerStats.values()]
@@ -201,12 +245,12 @@ export async function handleZuri(ctx: Context) {
             .filter(player => player.wins > 0 || player.losses > 0);
 
         if (sortedPlayers.length === 0) {
-            const timeFrame = option === 'bugin' ? 'today' : 'this month';
+            const timeFrame = option === 'bugun' ? 'today' : 'this month';
             const gameType = ['blitz', 'bullet', 'rapid'].includes(option || '') ? ` for ${option} games` : '';
             return ctx.reply(`📊 No games found${gameType} ${timeFrame}.\n\nType /zuri help to see all available commands.`);
         }
 
-        // Format response without @ symbol
+        // Format response
         const response = [
             title,
             description,
