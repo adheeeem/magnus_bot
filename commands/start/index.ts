@@ -1,12 +1,39 @@
-import { CommandContext, Context } from "grammy";
+import { CommandContext, Context, GrammyError } from "grammy";
 import { saveUser } from "../../utils/csv";
 
 let awaitingUsername = new Set<number>();
 
 export async function handleStart(ctx: CommandContext<any>) {
-  if (!ctx.from?.id) return;
-  awaitingUsername.add(ctx.from.id);
-  await ctx.reply("👋 Welcome! Please send me your Chess.com username:");
+  try {
+    await ctx.reply(
+      "👋 Welcome! To register, please send your Chess.com and Telegram usernames to @azimjonfffff"
+    );
+  } catch (err) {
+    const errorContext = {
+      updateId: ctx.update.update_id,
+      userId: ctx.from?.id,
+      chatId: ctx.chat?.id,
+      timestamp: new Date().toISOString()
+    };
+
+    if (err instanceof GrammyError && err.description.includes("bot was blocked by the user")) {
+      console.log(JSON.stringify({
+        level: "warn",
+        type: "bot_blocked",
+        message: `Bot was blocked by user ${ctx.from?.id}`,
+        ...errorContext,
+        error: err.description
+      }));
+    } else {
+      console.log(JSON.stringify({
+        level: "error",
+        type: "reply_failed",
+        message: "Failed to send reply in /start",
+        ...errorContext,
+        error: err instanceof Error ? err.message : String(err)
+      }));
+    }
+  }
 }
 
 export async function handleUsername(ctx: Context) {
