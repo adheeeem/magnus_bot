@@ -106,6 +106,7 @@ export async function handleZuri(ctx: Context) {
         }
 
         const now = new Date();
+        console.log('[Debug] Server time (UTC):', now.toISOString());
         let startDate: Date;
         let title: string;
         let description: string;
@@ -113,7 +114,14 @@ export async function handleZuri(ctx: Context) {
         if (option === 'bugin') {
             // Get start of today in Tajikistan time
             startDate = getStartOfDayTajikistan(now);
-            console.log("startDate", startDate);
+            const tajikNow = getTajikistanTime(now);
+            
+            console.log('[Debug] Timezone info:', {
+                serverTime: now.toISOString(),
+                tajikistanTime: tajikNow.toISOString(),
+                startDate: startDate.toISOString(),
+                filterCutoff: startDate.toUTCString()
+            });
             title = "🏆 Today's Leaderboard";
             description = COMMAND_DESCRIPTIONS.bugin;
         } else {
@@ -160,6 +168,15 @@ export async function handleZuri(ctx: Context) {
                     // Filter by game type if specified
                     if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
                         return;
+                    }
+
+                    if (option === 'bugin') {
+                        console.log('[Debug] Game time info:', {
+                            player: chessUsername,
+                            gameEndUTC: gameEndTimeUTC.toISOString(),
+                            gameEndTajikistan: gameEndTimeTajikistan.toISOString(),
+                            isIncluded: gameEndTimeTajikistan >= startDate
+                        });
                     }
 
                     const stats = processGame(game, chessUsername);
