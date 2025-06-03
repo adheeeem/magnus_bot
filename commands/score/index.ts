@@ -100,12 +100,17 @@ export async function handleScore(ctx: Context) {
         headToHeadGames.forEach((game: Game) => {
             const isPlayer1White = game.white.username.toLowerCase() === player1.toLowerCase();
             const player1Result = isPlayer1White ? game.white.result : game.black.result;
+            const player2Result = isPlayer1White ? game.black.result : game.white.result;
 
-            if (player1Result === 'win') player1Wins++;
-            else if (player1Result === 'resigned' || player1Result === 'timeout' || player1Result === 'abandoned') {
-                isPlayer1White ? player2Wins++ : player1Wins++;
+            if (player1Result === 'win' || player2Result === 'resigned' || 
+                player2Result === 'timeout' || player2Result === 'abandoned') {
+                player1Wins++;
+            } else if (player2Result === 'win' || player1Result === 'resigned' || 
+                player1Result === 'timeout' || player1Result === 'abandoned') {
+                player2Wins++;
+            } else {
+                draws++;
             }
-            else draws++;
         });
 
         // Format response
