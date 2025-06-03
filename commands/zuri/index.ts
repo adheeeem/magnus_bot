@@ -30,7 +30,8 @@ const userMap: Record<string, string> = {
     'Akhmedov_Sanjar': 'Sanjar_Akhmedov',
     'knajmitdinov': 'komiljon_najmitdinov',
     'nuriddin_yakubovich': 'Nuriddin_2004',
-    'Alisherrik': 'alisherrik'
+    'Alisherrik': 'alisherrik',
+    'Abbosi12': 'Abbosi12'
 }
 
 const COMMAND_DESCRIPTIONS = {
