@@ -17,7 +17,8 @@ interface PlayerStats {
     username: string;
     wins: number;
     losses: number;
-    netWins: number;
+    totalGames: number;
+    winRate: number;
 }
 
 // Store user mappings in a simple object
@@ -103,7 +104,8 @@ export async function handleZuri(ctx: Context) {
                 username: tgUsername,
                 wins: 0,
                 losses: 0,
-                netWins: 0
+                totalGames: 0,
+                winRate: 0
             });
         }
 
@@ -196,10 +198,10 @@ export async function handleZuri(ctx: Context) {
             }
         }));
 
-        // Sort players by net wins
+        // Sort players by win rate
         const sortedPlayers = [...playerStats.values()]
-            .sort((a, b) => b.netWins - a.netWins)
-            .filter(player => player.wins > 0 || player.losses > 0);
+            .sort((a, b) => b.winRate - a.winRate)
+            .filter(player => player.totalGames > 0);
 
         if (sortedPlayers.length === 0) {
             const timeFrame = option === 'bugun' ? 'today' : 'this month';
@@ -207,13 +209,13 @@ export async function handleZuri(ctx: Context) {
             return ctx.reply(`📊 No games found${gameType} ${timeFrame}.\n\nType /zuri help to see all available commands.`);
         }
 
-        // Format response without @ symbol
+        // Format response with win rate
         const response = [
             title,
             description,
             "",
             ...sortedPlayers.map((player, index) =>
-                `${getPositionEmoji(index + 1)} ${player.username}: ${player.netWins >= 0 ? '+' : ''}${player.netWins} (W: ${player.wins} L: ${player.losses})`
+                `${getPositionEmoji(index + 1)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses})`
             ),
             "",
             "Type /zuri help to see all available commands."
@@ -251,7 +253,8 @@ function updatePlayerStats(username: string, { wins, losses }: { wins: number; l
     if (stats) {
         stats.wins += wins;
         stats.losses += losses;
-        stats.netWins = stats.wins - stats.losses;
+        stats.totalGames = stats.wins + stats.losses;
+        stats.winRate = stats.totalGames > 0 ? (stats.wins / stats.totalGames) * 100 : 0;
     }
 }
 
