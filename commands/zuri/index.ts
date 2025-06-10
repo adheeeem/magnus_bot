@@ -201,12 +201,13 @@ export async function handleZuri(ctx: Context) {
         // Sort players by win rate
         const sortedPlayers = [...playerStats.values()]
             .sort((a, b) => b.winRate - a.winRate)
-            .filter(player => player.totalGames > 0);
+            .filter(player => player.totalGames >= 3);
 
         if (sortedPlayers.length === 0) {
             const timeFrame = option === 'bugun' ? 'today' : 'this month';
             const gameType = ['blitz', 'bullet', 'rapid'].includes(option || '') ? ` for ${option} games` : '';
-            return ctx.reply(`📊 No games found${gameType} ${timeFrame}.\n\nType /zuri help to see all available commands.`);
+            const minGamesMsg = "Players need at least 3 games to appear on the leaderboard.";
+            return ctx.reply(`📊 No qualifying players found${gameType} ${timeFrame}.\n${minGamesMsg}\n\nType /zuri help to see all available commands.`);
         }
 
         // Format response with win rate
