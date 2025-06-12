@@ -24,10 +24,10 @@ interface PlayerStats {
 // Store user mappings in a simple object
 // Key: Telegram username, Value: chess.com username
 const userMap: Record<string, string> = {
-    'azimjonfffff': 'guaje032',
+    'azimjonfffff': 'adheeeem',
     'rahniz90': 'RahNiz',
     'RahmonovShuhrat': 'shuhratrahmonov',
-    'aisoqov': 'adheeeem',
+    'aisoqov': 'guaje032',
     'Akhmedov_Sanjar': 'Sanjar_Akhmedov',
     'knajmitdinov': 'komiljon_najmitdinov',
     'nuriddin_yakubovich': 'Nuriddin_2004',
