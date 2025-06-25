@@ -200,7 +200,12 @@ export async function handleZuri(ctx: Context) {
 
         // Sort players by win rate
         const sortedPlayers = [...playerStats.values()]
-            .sort((a, b) => b.winRate - a.winRate)
+            .sort((a, b) => {
+                if (b.winRate !== a.winRate) {
+                    return b.winRate - a.winRate;
+                }
+                return b.wins - a.wins;
+            })
             .filter(player => player.totalGames >= 3);
 
         if (sortedPlayers.length === 0) {
