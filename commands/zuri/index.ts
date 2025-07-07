@@ -28,7 +28,7 @@ const userMap: Record<string, string> = {
     'rahniz90': 'RahNiz',
     'RahmonovShuhrat': 'shuhratrahmonov',
     'aisoqov': 'guaje032',
-    'Akhmedov_Sanjar': 'Sanjar_Akhmedov',
+    'Akhmedov_Sanjar': 'Akhmedov_Sanjar',
     'knajmitdinov': 'komiljon_najmitdinov',
     'nuriddin_yakubovich': 'Nuriddin_2004',
     'Alisherrik': 'alisherrik',
