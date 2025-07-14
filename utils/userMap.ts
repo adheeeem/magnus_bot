@@ -15,13 +15,3 @@ export const userMap: Record<string, string> = {
 export function getChessUsername(telegramUsername: string): string | null {
     return userMap[telegramUsername] || null;
 }
-
-export function addUser(telegramUsername: string, chessUsername: string): boolean {
-    try {
-        userMap[telegramUsername] = chessUsername;
-        return true;
-    } catch (error) {
-        console.error('Error adding user to map:', error);
-        return false;
-    }
-}
