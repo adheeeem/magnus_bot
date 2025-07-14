@@ -1,6 +1,5 @@
 import { Context } from "grammy";
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { getChessUsername } from "../../utils/userMap";
 
 interface Game {
     url: string;
@@ -24,24 +23,6 @@ interface Game {
     };
 }
 
-const CSV_FILE = path.join(process.cwd(), 'users.csv');
-
-async function getChessUsername(telegramUsername: string): Promise<string | null> {
-    try {
-        const content = await fs.readFile(CSV_FILE, 'utf-8');
-        const lines = content.split('\n');
-        for (const line of lines) {
-            const [tgUsername, chessUsername] = line.split(',');
-            if (tgUsername === telegramUsername) {
-                return chessUsername;
-            }
-        }
-        return null;
-    } catch {
-        return null;
-    }
-}
-
 export async function handleScore(ctx: Context) {
     // Extract mentioned users from the message
     const mentions = ctx.message?.entities?.filter(e => e.type === 'mention') || [];
@@ -56,7 +37,7 @@ export async function handleScore(ctx: Context) {
     });
 
     // Get chess.com usernames for both users
-    const chessUsernames = await Promise.all(usernames.map(username => getChessUsername(username || '')));
+    const chessUsernames = usernames.map(username => getChessUsername(username || ''));
     
     if (chessUsernames.includes(null)) {
         return ctx.reply("⚠️ One or both users haven't registered their Chess.com username. They should use /start first.");

@@ -1,5 +1,5 @@
 import { CommandContext, Context, GrammyError } from "grammy";
-import { saveUser } from "../../utils/csv";
+import { addUser } from "../../utils/userMap";
 
 let awaitingUsername = new Set<number>();
 
@@ -52,7 +52,11 @@ export async function handleUsername(ctx: Context) {
     }
 
     // Save user data
-    await saveUser(telegramUsername, chessUsername);
+    const success = addUser(telegramUsername, chessUsername);
+    if (!success) {
+      return ctx.reply("🚨 Error saving user data. Please try /start again.");
+    }
+    
     awaitingUsername.delete(ctx.from.id);
     await ctx.reply(`✅ Successfully registered! You can now use the /stats command to check your stats.`);
   } catch (err) {

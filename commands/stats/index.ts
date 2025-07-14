@@ -1,6 +1,5 @@
 import { Context } from "grammy";
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { getChessUsername } from "../../utils/userMap";
 
 interface Rating {
   last?: { rating: number };
@@ -16,8 +15,6 @@ interface ChessStats {
 
 type RatingKey = "chess_rapid" | "chess_blitz" | "chess_bullet";
 
-const CSV_FILE = path.join(process.cwd(), 'users.csv');
-
 export async function handleStats(ctx: Context) {
   // For /stats command without username, use the sender's username
   let username = ctx.message?.text?.replace('/stats', '').trim().toLowerCase();
@@ -25,18 +22,10 @@ export async function handleStats(ctx: Context) {
   if (!username) {
     // If no username provided, try to get the sender's username
     const telegramUsername = ctx.from?.username || String(ctx.from?.id);
-    try {
-      const content = await fs.readFile(CSV_FILE, 'utf-8');
-      const lines = content.split('\n');
-      for (const line of lines) {
-        const [tgUsername, chessUsername] = line.split(',');
-        if (tgUsername === telegramUsername) {
-          username = chessUsername.trim();
-          break;
-        }
-      }
-    } catch (err) {
-      console.error('Error reading CSV:', err);
+    const chessUsername = getChessUsername(telegramUsername);
+    
+    if (chessUsername) {
+      username = chessUsername;
     }
     
     if (!username) {

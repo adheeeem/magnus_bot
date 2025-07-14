@@ -1,4 +1,5 @@
 import { Context } from "grammy";
+import { userMap } from "../../utils/userMap";
 
 interface Game {
     end_time: number;
@@ -19,20 +20,6 @@ interface PlayerStats {
     losses: number;
     totalGames: number;
     winRate: number;
-}
-
-// Store user mappings in a simple object
-// Key: Telegram username, Value: chess.com username
-const userMap: Record<string, string> = {
-    'azimjonfffff': 'adheeeem',
-    'rahniz90': 'RahNiz',
-    'RahmonovShuhrat': 'shuhratrahmonov',
-    'aisoqov': 'guaje032',
-    'Akhmedov_Sanjar': 'Akhmedov_Sanjar',
-    'knajmitdinov': 'komiljon_najmitdinov',
-    'nuriddin_yakubovich': 'Nuriddin_2004',
-    'Alisherrik': 'alisherrik',
-    'Abbosi12': 'Abbosi12'
 }
 
 const COMMAND_DESCRIPTIONS = {
