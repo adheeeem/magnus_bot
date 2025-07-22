@@ -10,7 +10,8 @@ export const userMap: Record<string, string> = {
     'nuriddin_yakubovich': 'Nuriddin_2004',
     'Alisherrik': 'alisherrik',
     'Abbosi12': 'Abbosi12',
-    'Atamir93': 'atamir1806'
+    'Atamir93': 'atamir1806',
+    'Komdll': 'komdll'
 };
 
 export function getChessUsername(telegramUsername: string): string | null {
