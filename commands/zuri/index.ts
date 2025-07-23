@@ -215,15 +215,14 @@ export async function handleZuri(ctx: Context) {
             // Check if this player is tied with the previous player
             if (i > 0) {
                 const prevPlayer = sortedPlayers[i - 1];
-                // If win rates are different, update the rank
-                if (player.winRate !== prevPlayer.winRate) {
+                // Players are truly tied only if they have same win rate AND same wins
+                const isTied = (player.winRate === prevPlayer.winRate && player.wins === prevPlayer.wins);
+                
+                // If not tied, update the rank to current position
+                if (!isTied) {
                     currentRank = i + 1;
                 }
-                // If win rates are the same but wins are different, also update rank
-                else if (player.wins !== prevPlayer.wins) {
-                    currentRank = i + 1;
-                }
-                // Otherwise, keep the same rank (tie)
+                // Otherwise, keep the same rank (true tie)
             }
             
             playerLines.push(
