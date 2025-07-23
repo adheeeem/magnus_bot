@@ -1,0 +1,9 @@
+{
+  "name": "setup",
+  "scripts": {
+    "migrate": "npx ts-node migrate.ts",
+    "dev": "npx ts-node bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js"
+  }
+}

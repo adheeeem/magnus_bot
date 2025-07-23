@@ -1,10 +1,11 @@
 // bot.ts
 import { Bot } from "grammy";
 import * as dotenv from "dotenv";
-import { handleStart, handleUsername } from "./commands/start";
+import { handleStart } from "./commands/start";
 import { handleStats } from "./commands/stats";
 import { handleScore } from "./commands/score";
 import { handleZuri } from "./commands/zuri";
+import { handleRegistration, isUserInRegistrationFlow } from "./utils/registration";
 import { BotError, GrammyError, HttpError } from "grammy";
 
 dotenv.config();
@@ -23,7 +24,14 @@ bot.command("zuri", handleZuri);
 bot.on("message:text", async (ctx) => {
   // Only process text messages in private chats
   if (ctx.chat?.type === "private") {
-    await handleUsername(ctx);
+    const userId = ctx.from?.id;
+    
+    // Check if user is in registration flow
+    if (userId && isUserInRegistrationFlow(userId)) {
+      await handleRegistration(ctx);
+    }
+    // If not in registration flow, we can ignore the message
+    // (previously this called handleUsername for all text messages)
   }
 });
 

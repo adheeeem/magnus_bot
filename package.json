@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx ts-node bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "migrate": "npx ts-node migrate.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.52.0",
     "dotenv": "^16.5.0",
     "grammy": "^1.36.1",
     "node-fetch": "^3.3.2"

@@ -20,12 +20,14 @@ export async function handleStats(ctx: Context) {
   let username = ctx.message?.text?.replace('/stats', '').trim().toLowerCase();
   
   if (!username) {
-    // If no username provided, try to get the sender's username
-    const telegramUsername = ctx.from?.username || String(ctx.from?.id);
-    const chessUsername = getChessUsername(telegramUsername);
+    // If no username provided, try to get the sender's chess.com username
+    const telegramUsername = ctx.from?.username;
     
-    if (chessUsername) {
-      username = chessUsername;
+    if (telegramUsername) {
+      const chessUsername = await getChessUsername(telegramUsername);
+      if (chessUsername) {
+        username = chessUsername;
+      }
     }
     
     if (!username) {

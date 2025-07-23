@@ -1,5 +1,5 @@
 import { Context } from "grammy";
-import { userMap } from "../../utils/userMap";
+import { getAllUserMappings } from "../../utils/userMap";
 
 interface Game {
     end_time: number;
@@ -79,9 +79,12 @@ export async function handleZuri(ctx: Context) {
             return ctx.reply(getCommandHelp());
         }
 
+        // Get user mappings from Supabase
+        const userMap = await getAllUserMappings();
+        
         // Check if we have any registered users
         if (Object.keys(userMap).length === 0) {
-            return ctx.reply("⚠️ No registered users found.");
+            return ctx.reply("⚠️ No registered users found. Users can register with /start");
         }
 
         // Initialize stats for all players

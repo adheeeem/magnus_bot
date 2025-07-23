@@ -1,6 +1,49 @@
 # 🏆 Magnus Bot
 
-**Magnus Bot** is a lightweight, serverless **Telegram chess‑club assistant** written in TypeScript.  It runs entirely on **Vercel functions** and uses the [grammY](https://grammy.dev/) framework to talk to the Telegram Bot API.
+**Magnus Bot** is a lightweight, serverless ### 2 · Configure
+
+Create a `.env` file at ## ☁️ Deploying to Vercel
+
+1. **Import** the repo in the Vercel dashboard.
+2. **Environment → Add** environment variables:
+   - `BOT_TOKEN` (your Telegram bot token)
+   - `SUPABASE_URL` (your Supabase project URL)
+   - `SUPABASE_ANON_KEY` (your Supabase anon key)
+3. **Build Command** – leave *empty* (Vercel auto‑installs & transpiles TS).
+4. Click **Deploy**.
+5. Set the webhook once (replace `<project>` and region if needed):
+
+```bash
+curl \
+  -X POST "https://api.telegram.org/bot$BOT_TOKEN/setWebhook" \
+  -d "url=https://<project>.vercel.app/webhook"
+```
+
+That's it — Vercel's global edge will now forward Telegram updates to your function.th your configuration:
+
+```env
+# Telegram Bot Token
+BOT_TOKEN=123456:ABC‑DEF…
+
+# Supabase Configuration
+SUPABASE_URL=https://your-supabase-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```
+
+### 3 · Setup Database
+
+1. Create a new Supabase project at https://supabase.com
+2. Run the SQL commands from `schema.sql` in your Supabase SQL editor
+3. Copy your project URL and anon key to the `.env` file
+
+### 4 · Run the bot
+
+```bash
+# start TypeScript directly
+$ npx ts-node bot.ts
+```
+
+> Local bots generally use **long‑polling**.  When you deploy to Vercel the bot automatically switches to **webhooks**.‑club assistant** written in TypeScript.  It runs entirely on **Vercel functions** and uses the [grammY](https://grammy.dev/) framework to talk to the Telegram Bot API.
 
 It helps a small community track their Chess.com progress with:
 
@@ -37,9 +80,13 @@ It helps a small community track their Chess.com progress with:
 │   ├── start.ts
 │   └── zuri.ts
 ├── utils/
-│   └── userMap.ts    # Community username ↔︎ Chess.com mapping
-├── vercel.json       # Route  /webhook  ➜  api/webhook.ts
+│   ├── userMap.ts        # User mapping functions (now uses Supabase)
+│   ├── supabase.ts       # Supabase client and database operations
+│   └── registration.ts   # User registration flow handler
+├── vercel.json           # Route  /webhook  ➜  api/webhook.ts
 ├── tsconfig.json
+├── schema.sql            # Supabase database schema
+├── migrate.ts            # Migration script for legacy users
 └── package.json
 ```
 

@@ -1,16 +1,50 @@
 import { CommandContext, GrammyError } from "grammy";
+import { getChessUsername } from "../../utils/supabase";
+import { startRegistrationFlow } from "../../utils/registration";
 
 export async function handleStart(ctx: CommandContext<any>) {
   try {
+    const userId = ctx.from?.id;
+    const telegramUsername = ctx.from?.username;
+
+    if (!userId) {
+      await ctx.reply("❌ Unable to get your user information. Please try again.");
+      return;
+    }
+
+    if (!telegramUsername) {
+      await ctx.reply(
+        "❌ You need to set a Telegram username to use this bot.\n\n" +
+        "Go to Telegram Settings → Username and create one, then try /start again."
+      );
+      return;
+    }
+
+    // Check if user is already registered
+    const existingChessUsername = await getChessUsername(telegramUsername);
+    
+    if (existingChessUsername) {
+      await ctx.reply(
+        `👋 Welcome back!\n\n` +
+        `You're already registered:\n` +
+        `🎯 Telegram: @${telegramUsername}\n` +
+        `♟️ Chess.com: ${existingChessUsername}\n\n` +
+        `Available commands:\n` +
+        `📊 /stats - View your chess statistics\n` +
+        `🏆 /zuri - See leaderboards\n` +
+        `⚔️ /score @user1 @user2 - Compare players`
+      );
+      return;
+    }
+
+    // Start registration flow for new users
+    startRegistrationFlow(userId);
+    
     await ctx.reply(
       "👋 Welcome to Magnus Bot!\n\n" +
-      "🌟 To register your Chess.com username:\n\n" +
-      "1️⃣ Go to this repository: https://github.com/adheeeem/magnus_bot\n" +
-      "2️⃣ Star the repository ⭐\n" +
-      "3️⃣ Add your usernames to the userMap in utils/userMap.ts\n" +
-      "4️⃣ Create a Pull Request\n\n" +
-      "⚠️ Note: Your PR won't be accepted if you haven't starred the repository!\n\n" +
-      "📝 Format: 'your_telegram_username': 'your_chess_username'"
+      "🎯 Let's register your Chess.com account.\n\n" +
+      "Please enter your Chess.com username:\n" +
+      "(The bot will verify it exists on Chess.com)"
     );
   } catch (err) {
     const errorContext = {
@@ -38,4 +72,15 @@ export async function handleStart(ctx: CommandContext<any>) {
       }));
     }
   }
-} 
+}
+
+// Legacy function - keeping for compatibility but not using GitHub flow anymore
+export async function handleUsername(ctx: any) {
+  // This function is now handled by the registration flow
+  // We'll redirect to the new registration system
+  const userId = ctx.from?.id;
+  if (userId) {
+    const { handleRegistration } = await import("../../utils/registration");
+    await handleRegistration(ctx);
+  }
+}
