@@ -1,0 +1,12 @@
+node_modules
+.env
+.env.local
+dist
+*.log
+.DS_Store
+.vscode
+README.md
+SUPABASE_INTEGRATION.md
+migrate.ts
+collect-user-ids.ts
+bot.ts

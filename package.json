@@ -5,8 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx ts-node bot.ts",
-    "build": "tsc",
-    "start": "node dist/bot.js",
+    "start": "npx ts-node bot.ts",
     "migrate": "npx ts-node migrate.ts"
   },
   "keywords": [],
