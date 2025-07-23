@@ -27,7 +27,7 @@ export async function handleScore(ctx: Context) {
     // Extract mentioned users from the message
     const mentions = ctx.message?.entities?.filter(e => e.type === 'mention') || [];
     if (mentions.length !== 2) {
-        return ctx.reply("⚠️ Please mention exactly two users to compare their head-to-head scores.\nExample: /score @user1 @user2");
+        return ctx.reply("⚠️ Please mention exactly two users to compare their head-to-head scores (Use telegram usernames).\nExample: /score @user1 @user2");
     }
 
     const usernames = mentions.map(mention => {
@@ -50,7 +50,7 @@ export async function handleScore(ctx: Context) {
         // Get current month's archives for player1
         const archivesRes = await fetch(`https://api.chess.com/pub/player/${player1}/games/archives`);
         if (!archivesRes.ok) {
-            return ctx.reply("⚠️ Error fetching game archives.");
+            return ctx.reply("⚠️ Error fetching game archives. Please try again later.");
         }
 
         const archives = await archivesRes.json();
@@ -59,7 +59,7 @@ export async function handleScore(ctx: Context) {
         // Get games from current month
         const gamesRes = await fetch(currentMonth);
         if (!gamesRes.ok) {
-            return ctx.reply("⚠️ Error fetching games.");
+            return ctx.reply("⚠️ Error fetching games. Please try again later.");
         }
 
         const { games } = await gamesRes.json();
@@ -71,7 +71,7 @@ export async function handleScore(ctx: Context) {
         );
 
         if (headToHeadGames.length === 0) {
-            return ctx.reply(`📊 No games found between @${usernames[0]} and @${usernames[1]} this month.`);
+            return ctx.reply(`📊 No games found between @${usernames[0]} and @${usernames[1]} for this month.`);
         }
 
         // Calculate statistics
@@ -111,6 +111,6 @@ export async function handleScore(ctx: Context) {
         await ctx.reply(response);
     } catch (err) {
         console.error(err);
-        ctx.reply("🚨 Error fetching head-to-head stats.");
+        ctx.reply("🚨 Error fetching head-to-head stats. Please try again later.");
     }
 } 

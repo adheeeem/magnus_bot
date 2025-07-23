@@ -37,7 +37,7 @@ export async function handleStats(ctx: Context) {
 
   try {
     const res = await fetch(`https://api.chess.com/pub/player/${username}/stats`);
-    if (!res.ok) return ctx.reply("⚠️ Could not fetch stats.");
+    if (!res.ok) return ctx.reply("⚠️ Could not fetch stats. Please try again later.");
     const stats = await res.json() as ChessStats;
 
     const getRating = (mode: RatingKey) => stats[mode]?.last?.rating ?? "N/A";
@@ -47,6 +47,6 @@ export async function handleStats(ctx: Context) {
     );
   } catch (err) {
     console.error(err);
-    ctx.reply("🚨 Error while fetching stats.");
+    ctx.reply("🚨 Error while fetching stats. Please try again later.");
   }
 } 
