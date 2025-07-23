@@ -31,7 +31,7 @@ export async function handleStart(ctx: CommandContext<any>) {
         `♟️ Chess.com: ${existingChessUsername}\n\n` +
         `Available commands:\n` +
         `📊 /stats - View your chess statistics\n` +
-        `🏆 /zuri - See leaderboards\n` +
+        `🏆 /top - See leaderboards\n` +
         `⚔️ /score @user1 @user2 - Compare players`
       );
       return;

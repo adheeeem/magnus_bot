@@ -60,7 +60,7 @@ async function handleChessUsernameInput(ctx: Context, chessUsername: string): Pr
         `♟️ Chess.com: ${chessUsername}\n\n` +
         `You can now use:\n` +
         `📊 /stats - View your chess statistics\n` +
-        `🏆 /zuri - See leaderboards\n` +
+        `🏆 /top - See leaderboards\n` +
         `⚔️ /score @user1 @user2 - Compare players`
       );
     } else {

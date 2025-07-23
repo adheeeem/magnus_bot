@@ -32,13 +32,13 @@ const COMMAND_DESCRIPTIONS = {
 
 function getCommandHelp(): string {
     return [
-        "📋 Available /zuri commands:",
+        "📋 Available /top commands:",
         "",
-        "🎮 /zuri - " + COMMAND_DESCRIPTIONS.default,
-        "🌅 /zuri bugun - " + COMMAND_DESCRIPTIONS.bugun,
-        "⚡ /zuri blitz - " + COMMAND_DESCRIPTIONS.blitz,
-        "🔫 /zuri bullet - " + COMMAND_DESCRIPTIONS.bullet,
-        "🏃 /zuri rapid - " + COMMAND_DESCRIPTIONS.rapid,
+        "🎮 /top - " + COMMAND_DESCRIPTIONS.default,
+        "🌅 /top bugun - " + COMMAND_DESCRIPTIONS.bugun,
+        "⚡ /top blitz - " + COMMAND_DESCRIPTIONS.blitz,
+        "🔫 /top bullet - " + COMMAND_DESCRIPTIONS.bullet,
+        "🏃 /top rapid - " + COMMAND_DESCRIPTIONS.rapid,
         "",
         "Use any command to see the corresponding leaderboard!"
     ].join('\n');
@@ -202,7 +202,7 @@ export async function handleZuri(ctx: Context) {
             const timeFrame = option === 'bugun' ? 'today' : 'this month';
             const gameType = ['blitz', 'bullet', 'rapid'].includes(option || '') ? ` for ${option} games` : '';
             const minGamesMsg = "Players need at least 3 games to appear on the leaderboard.";
-            return ctx.reply(`📊 No qualifying players found${gameType} ${timeFrame}.\n${minGamesMsg}\n\nType /zuri help to see all available commands.`);
+            return ctx.reply(`📊 No qualifying players found${gameType} ${timeFrame}.\n${minGamesMsg}\n\nType /top help to see all available commands.`);
         }
 
         // Format response with win rate
@@ -214,14 +214,14 @@ export async function handleZuri(ctx: Context) {
                 `${getPositionEmoji(index + 1)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses})`
             ),
             "",
-            "Type /zuri help to see all available commands."
+            "Type /top help to see all available commands."
         ].join('\n');
 
         await ctx.reply(response);
 
     } catch (err) {
         console.error(err);
-        ctx.reply("🚨 Error generating leaderboard. Type /zuri help to see available commands.");
+        ctx.reply("🚨 Error generating leaderboard. Type /top help to see available commands.");
     }
 }
 
