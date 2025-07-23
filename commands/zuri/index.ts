@@ -205,14 +205,37 @@ export async function handleZuri(ctx: Context) {
             return ctx.reply(`📊 No qualifying players found${gameType} ${timeFrame}.\n${minGamesMsg}\n\nType /top help to see all available commands.`);
         }
 
-        // Format response with win rate
+        // Format response with win rate and proper tie handling
+        const playerLines: string[] = [];
+        let currentRank = 1;
+        
+        for (let i = 0; i < sortedPlayers.length; i++) {
+            const player = sortedPlayers[i];
+            
+            // Check if this player is tied with the previous player
+            if (i > 0) {
+                const prevPlayer = sortedPlayers[i - 1];
+                // If win rates are different, update the rank
+                if (player.winRate !== prevPlayer.winRate) {
+                    currentRank = i + 1;
+                }
+                // If win rates are the same but wins are different, also update rank
+                else if (player.wins !== prevPlayer.wins) {
+                    currentRank = i + 1;
+                }
+                // Otherwise, keep the same rank (tie)
+            }
+            
+            playerLines.push(
+                `${getPositionEmoji(currentRank)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses})`
+            );
+        }
+
         const response = [
             title,
             description,
             "",
-            ...sortedPlayers.map((player, index) =>
-                `${getPositionEmoji(index + 1)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses})`
-            ),
+            ...playerLines,
             "",
             "Type /top help to see all available commands."
         ].join('\n');
