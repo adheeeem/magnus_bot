@@ -218,9 +218,9 @@ export async function handleZuri(ctx: Context) {
                 // Players are truly tied only if they have same win rate AND same wins
                 const isTied = (player.winRate === prevPlayer.winRate && player.wins === prevPlayer.wins);
                 
-                // If not tied, update the rank to current position
+                // If not tied, increment rank by 1 (consecutive ranking)
                 if (!isTied) {
-                    currentRank = i + 1;
+                    currentRank++;
                 }
                 // Otherwise, keep the same rank (true tie)
             }
