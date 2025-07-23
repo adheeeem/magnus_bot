@@ -37,13 +37,14 @@ export async function handleScore(ctx: Context) {
     });
 
     // Get chess.com usernames for both users
-    const chessUsernames = usernames.map(username => getChessUsername(username || ''));
+    const chessUsernamePromises = usernames.map(username => getChessUsername(username || ''));
+    const chessUsernames = await Promise.all(chessUsernamePromises);
     
     if (chessUsernames.includes(null)) {
         return ctx.reply("⚠️ One or both users haven't registered their Chess.com username. They should use /start first.");
     }
 
-    const [player1, player2] = chessUsernames as string[];
+    const [player1, player2] = chessUsernames.filter(u => u !== null) as string[];
     
     try {
         // Get current month's archives for player1
