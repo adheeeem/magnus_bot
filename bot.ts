@@ -4,7 +4,7 @@ import * as dotenv from "dotenv";
 import { handleStart } from "./commands/start";
 import { handleStats } from "./commands/stats";
 import { handleScore } from "./commands/score";
-import { handleZuri as handleTop } from "./commands/zuri";
+import { handleZuri as handleTop } from "./commands/top";
 import { handleRegistration, isUserInRegistrationFlow } from "./utils/registration";
 import { BotError, GrammyError, HttpError } from "grammy";
 

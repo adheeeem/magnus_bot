@@ -25,14 +25,15 @@ export async function handleStart(ctx: CommandContext<any>) {
     
     if (existingChessUsername) {
       await ctx.reply(
-        `👋 Welcome back!\n\n` +
+        `👋 Хуш омадед! / Welcome back!\n\n` +
+        `Шумо аллакай сабт шудаед:\n` +
         `You're already registered:\n` +
         `🎯 Telegram: @${telegramUsername}\n` +
         `♟️ Chess.com: ${existingChessUsername}\n\n` +
-        `Available commands:\n` +
-        `📊 /stats - View your chess statistics\n` +
-        `🏆 /top - See leaderboards\n` +
-        `⚔️ /score @user1 @user2 - Compare players`
+        `Фармонҳои дастрас / Available commands:\n` +
+        `📊 /stats - Омори шахмат / View your chess statistics\n` +
+        `🏆 /top - Рейтинг / See leaderboards\n` +
+        `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players`
       );
       return;
     }
@@ -41,9 +42,12 @@ export async function handleStart(ctx: CommandContext<any>) {
     startRegistrationFlow(userId);
     
     await ctx.reply(
-      "👋 Welcome to Magnus Bot!\n\n" +
+      "👋 Хуш омадед ба Magnus Bot! / Welcome to Magnus Bot!\n\n" +
+      "🎯 Биёед ҳисоби Chess.com-и худро сабт кунем.\n" +
       "🎯 Let's register your Chess.com account.\n\n" +
+      "Лутфан номи корбарии Chess.com-и худро ворид кунед:\n" +
       "Please enter your Chess.com username:\n" +
+      "(Бот мавҷудияти онро дар Chess.com тасдиқ мекунад)\n" +
       "(The bot will verify it exists on Chess.com)"
     );
   } catch (err) {
