@@ -5,6 +5,7 @@ import { handleStart } from "./commands/start";
 import { handleStats } from "./commands/stats";
 import { handleScore } from "./commands/score";
 import { handleZuri as handleTop } from "./commands/top";
+import { handleStandings } from "./commands/standings";
 import { handleRegistration, isUserInRegistrationFlow } from "./utils/registration";
 import { BotError, GrammyError, HttpError } from "grammy";
 
@@ -18,6 +19,7 @@ export const bot = new Bot(token);
 bot.command("start", handleStart);
 bot.command("stats", handleStats);
 bot.command("score", handleScore);
+bot.command("standings", handleStandings);
 bot.command("top", handleTop);
 
 // Handle text messages for username registration only in private chats

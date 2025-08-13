@@ -3,6 +3,16 @@
     {
       "src": "/webhook",
       "dest": "api/webhook.ts"
+    },
+    {
+      "src": "/api/daily-championship",
+      "dest": "api/daily-championship.ts"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/daily-championship",
+      "schedule": "55 18 * * *"
     }
   ]
 }

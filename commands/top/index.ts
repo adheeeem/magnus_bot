@@ -1,6 +1,7 @@
 import { Context } from "grammy";
 import { getAllUserMappings } from "../../utils/userMap";
 import { fetchLichessGames } from "../../utils/chessApis";
+import { getAllUserScores } from "../../utils/championship";
 
 interface PlayerStats {
     username: string;
@@ -14,7 +15,7 @@ interface PlayerStats {
 
 const COMMAND_DESCRIPTIONS = {
     default: "Shows overall monthly leaderboard for all game types",
-    bugun: "Shows today's top players across all game types",
+    bugun: "Shows today's top players - Top 3 earn championship points!",
     blitz: "Shows monthly leaderboard for blitz games (3-5 minutes)",
     bullet: "Shows monthly leaderboard for bullet games (1-2 minutes)",
     rapid: "Shows monthly leaderboard for rapid games (10+ minutes)"
@@ -30,7 +31,13 @@ function getCommandHelp(): string {
         "🔫 /top bullet - " + COMMAND_DESCRIPTIONS.bullet,
         "🏃 /top rapid - " + COMMAND_DESCRIPTIONS.rapid,
         "",
-        "Use any command to see the corresponding leaderboard!"
+        "🏆 Championship System:",
+        "• Daily awards: 🥇300pts, 🥈200pts, 🥉100pts",
+        "• Need 3+ games to qualify for daily championship",
+        "• Points awarded daily at 23:55 Tajikistan time",
+        "",
+        "Use /standings to see championship standings!",
+        "Use any /top command to see the corresponding leaderboard!"
     ].join('\n');
 }
 
@@ -171,6 +178,9 @@ export async function handleZuri(ctx: Context) {
 
         // Format response with win rate and proper tie handling
         const playerLines: string[] = [];
+        const userScores = await getAllUserScores();
+        const scoresMap = new Map(userScores.map(score => [score.telegram_username, score.total_score]));
+        
         let currentRank = 1;
         
         for (let i = 0; i < sortedPlayers.length; i++) {
@@ -189,21 +199,37 @@ export async function handleZuri(ctx: Context) {
                 // Otherwise, keep the same rank (true tie)
             }
             
+            const championshipScore = scoresMap.get(player.username) || 0;
+            const scoreDisplay = championshipScore > 0 ? ` [${championshipScore}pts]` : '';
+            
             playerLines.push(
-                `${getPositionEmoji(currentRank)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses}) [♟️${player.chesscomGames} 🏰${player.lichessGames}]`
+                `${getPositionEmoji(currentRank)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses}) [♟️${player.chesscomGames} 🏰${player.lichessGames}]${scoreDisplay}`
             );
         }
 
-        const response = [
+        let response = [
             title,
             description,
-            "",
-            ...playerLines,
-            "",
-            "Type /top help to see all available commands."
-        ].join('\n');
+            ""
+        ];
+        
+        // Add championship info for daily leaderboards
+        if (option === 'bugun') {
+            response.push("🏆 Daily Championship: Top 3 earn points at day end!");
+            response.push("Points: 🥇300, 🥈200, 🥉100 | Need 3+ games");
+            response.push("");
+        }
+        
+        response.push(...playerLines);
+        response.push("");
+        
+        if (option === 'bugun') {
+            response.push("Use /standings to see championship standings");
+        }
+        
+        response.push("Type /top help to see all available commands.");
 
-        await ctx.reply(response);
+        await ctx.reply(response.join('\n'));
 
     } catch (err) {
         console.error(err);

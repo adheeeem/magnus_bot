@@ -20,12 +20,20 @@ It helps a small community track their **Chess.com** and **Lichess** progress wi
 ### Commands
 - 📊 `/stats` - View chess statistics from registered platforms
 - 🏆 `/top [option]` - Leaderboards with multiple modes:
-  - `bugun` (default) - Today's top players
+  - `bugun` (default) - Today's top players (earns championship points!)
   - `blitz` - Monthly blitz leaderboard
   - `bullet` - Monthly bullet leaderboard  
   - `rapid` - Monthly rapid leaderboard
+- 🏆 `/standings` - Championship standings and recent daily champions
 - ⚔️ `/score @user1 @user2` - Head-to-head comparison
 - 🆕 `/start` - Register with Chess.com and/or Lichess usernames
+
+### Daily Championship System
+- 🥇 **Daily Competition**: Top 3 players earn points each day
+- 🎯 **Point Awards**: 1st place (300pts), 2nd place (200pts), 3rd place (100pts)
+- ⏰ **Daily Reset**: Championships awarded at 23:55 Tajikistan time
+- 📊 **Requirements**: Minimum 3 games to qualify for daily championship
+- 🏆 **Ongoing Competition**: Track your progress with `/standings`
 
 ### Multi-Language Support
 - 🇺🇸 English

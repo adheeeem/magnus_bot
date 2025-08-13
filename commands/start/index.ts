@@ -39,7 +39,10 @@ export async function handleStart(ctx: CommandContext<any>) {
           `Фармонҳои дастрас / Available commands:\n` +
           `📊 /stats - Омори шахмат / View your chess statistics\n` +
           `🏆 /top - Рейтинг / See leaderboards\n` +
-          `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players`
+          `🏆 /standings - Championship standings\n` +
+          `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players\n\n` +
+          `🏆 Daily Championship: Top 3 players earn points daily!\n` +
+          `Awards: 🥇300pts, 🥈200pts, 🥉100pts (need 3+ games)`
         );
         return;
       }
