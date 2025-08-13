@@ -28,19 +28,43 @@ export async function handleStart(ctx: CommandContext<any>) {
       if (existingMappings.chess) platformsText += `♟️ Chess.com: ${existingMappings.chess}\n`;
       if (existingMappings.lichess) platformsText += `♟️ Lichess: ${existingMappings.lichess}\n`;
       
+      // Check if user has both platforms registered
+      if (existingMappings.chess && existingMappings.lichess) {
+        await ctx.reply(
+          `👋 Хуш омадед! / Welcome back!\n\n` +
+          `Шумо дар ҳарду платформа сабт шудаед:\n` +
+          `You're registered on both platforms:\n` +
+          `🎯 Telegram: @${telegramUsername}\n` +
+          platformsText + "\n" +
+          `Фармонҳои дастрас / Available commands:\n` +
+          `📊 /stats - Омори шахмат / View your chess statistics\n` +
+          `🏆 /top - Рейтинг / See leaderboards\n` +
+          `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players`
+        );
+        return;
+      }
+      
+      // User has only one platform, offer to add the other
+      const missingPlatform = existingMappings.chess ? 'Lichess' : 'Chess.com';
+      const missingPlatformNumber = existingMappings.chess ? '2' : '1';
+      
       await ctx.reply(
         `👋 Хуш омадед! / Welcome back!\n\n` +
         `Шумо аллакай сабт шудаед:\n` +
         `You're already registered:\n` +
         `🎯 Telegram: @${telegramUsername}\n` +
         platformsText + "\n" +
-        `Фармонҳои дастрас / Available commands:\n` +
-        `📊 /stats - Омори шахмат / View your chess statistics\n` +
-        `🏆 /top - Рейтинг / See leaderboards\n` +
-        `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players\n\n` +
-        `Агар мехоҳед платформаи дигарро илова кунед, боз ҳам /start-ро истифода баред.\n` +
-        `If you want to add another platform, use /start again.`
+        `➕ Оё мехоҳед ${missingPlatform}-ро низ илова кунед?\n` +
+        `➕ Would you like to add ${missingPlatform} as well?\n\n` +
+        `Агар ҳа, рақами ${missingPlatformNumber}-ро интихоб кунед:\n` +
+        `If yes, select option ${missingPlatformNumber}:\n\n` +
+        `1️⃣ Chess.com\n` +
+        `2️⃣ Lichess\n\n` +
+        `Ё "не/no" барои бекор кардан / Or "no" to cancel`
       );
+      
+      // Set user to platform selection state with existing data
+      startRegistrationFlow(userId);
       return;
     }
 

@@ -31,19 +31,45 @@ export async function handleRegistration(ctx: Context): Promise<void> {
 
 async function handlePlatformSelection(ctx: Context, selection: string): Promise<void> {
   const userId = ctx.from?.id;
-  if (!userId) return;
+  const telegramUsername = ctx.from?.username;
+  if (!userId || !telegramUsername) return;
 
   const choice = selection.toLowerCase();
   
+  // Handle cancellation
+  if (choice === 'не' || choice === 'нест' || choice === 'no' || choice === 'n' || choice === 'cancel') {
+    userStates.delete(userId);
+    await ctx.reply(
+      "✅ Бекор карда шуд. / Cancelled.\n" +
+      "Шумо метавонед ҳар вақт /start-ро истифода баред.\n" +
+      "You can use /start anytime to register for additional platforms."
+    );
+    return;
+  }
+  
+  // Get existing mappings to preserve them
+  const { getUserMappings } = await import('../utils/supabase');
+  const existingMappings = await getUserMappings(telegramUsername);
+  
   if (choice === '1' || choice === 'chess.com' || choice === 'chesscom') {
-    userStates.set(userId, { step: 'waiting_for_chess_username' });
+    const currentState = {
+      step: 'waiting_for_chess_username' as const,
+      lichessUsername: existingMappings?.lichess || undefined
+    };
+    userStates.set(userId, currentState);
+    
     await ctx.reply(
       "♟️ Chess.com танланди! / Chess.com selected!\n\n" +
       "Лутфан номи корбарии Chess.com-и худро ворид кунед:\n" +
       "Please enter your Chess.com username:"
     );
   } else if (choice === '2' || choice === 'lichess') {
-    userStates.set(userId, { step: 'waiting_for_lichess_username' });
+    const currentState = {
+      step: 'waiting_for_lichess_username' as const,
+      chessUsername: existingMappings?.chess || undefined
+    };
+    userStates.set(userId, currentState);
+    
     await ctx.reply(
       "♟️ Lichess танланди! / Lichess selected!\n\n" +
       "Лутфан номи корбарии Lichess-и худро ворид кунед:\n" +
@@ -54,7 +80,8 @@ async function handlePlatformSelection(ctx: Context, selection: string): Promise
       "❌ Интихоби нодуруст. Лутфан 1 ё 2-ро интихоб кунед:\n" +
       "❌ Invalid choice. Please select 1 or 2:\n\n" +
       "1️⃣ Chess.com\n" +
-      "2️⃣ Lichess"
+      "2️⃣ Lichess\n\n" +
+      "Ё \"не/no\" барои бекор кардан / Or \"no\" to cancel"
     );
   }
 }
