@@ -212,10 +212,9 @@ export async function handleZuri(ctx: Context) {
             }
             
             const championshipScore = scoresMap.get(player.username) || 0;
-            const scoreDisplay = championshipScore > 0 ? ` [${championshipScore}pts]` : '';
             
             playerLines.push(
-                `${getPositionEmoji(currentRank)} ${player.username}: ${player.weightedScore.toFixed(1)} score (${player.winRate.toFixed(1)}% • ${player.totalGames}g) [♟️${player.chesscomGames} 🏰${player.lichessGames}]${scoreDisplay}`
+                `${getPositionEmoji(currentRank)} ${player.username}: ${player.weightedScore.toFixed(1)} [♟️${player.chesscomGames} 🏰${player.lichessGames}]`
             );
         }
 
@@ -224,13 +223,6 @@ export async function handleZuri(ctx: Context) {
             description,
             ""
         ];
-        
-        // Add championship info for daily leaderboards
-        if (option === 'bugun') {
-            response.push("🏆 Daily Championship: Top 3 earn points at day end!");
-            response.push("Weighted Score = Win Rate × √(Games) × 100 | Need 3+ games");
-            response.push("");
-        }
         
         response.push(...playerLines);
         response.push("");
