@@ -79,6 +79,11 @@ export interface LichessGame {
     };
   };
   winner?: 'white' | 'black';
+  moves?: string;
+  clock?: {
+    initial: number;
+    increment: number;
+  };
 }
 
 // Chess.com API functions
@@ -148,7 +153,7 @@ export async function fetchLichessStats(username: string): Promise<LichessStats 
 
 export async function fetchLichessGames(username: string, since?: number, until?: number): Promise<LichessGame[] | null> {
   try {
-    let url = `https://lichess.org/api/games/user/${username}?max=100&rated=true`;
+    let url = `https://lichess.org/api/games/user/${username}?max=200&rated=true&pgnInJson=false`;
     if (since) url += `&since=${since}`;
     if (until) url += `&until=${until}`;
     
@@ -161,9 +166,11 @@ export async function fetchLichessGames(username: string, since?: number, until?
       headers['Authorization'] = `Bearer ${process.env.LICHESS_API_TOKEN}`;
     }
     
+    console.log(`[Debug] Lichess API call: ${url}`);
     const response = await fetch(url, { headers });
     
     if (!response.ok) {
+      console.error(`[Debug] Lichess API error: ${response.status} ${response.statusText}`);
       if (response.status === 401) {
         console.warn('Lichess API: Unauthorized access to games. Consider adding LICHESS_API_TOKEN to environment variables.');
       } else if (response.status === 429) {
@@ -186,6 +193,7 @@ export async function fetchLichessGames(username: string, since?: number, until?
       }
     });
     
+    console.log(`[Debug] Fetched ${games.length} Lichess games for ${username}`);
     return games;
   } catch (error) {
     console.error('Error fetching Lichess games:', error);

@@ -7,7 +7,8 @@
     "dev": "npx ts-node bot.ts",
     "start": "npx ts-node bot.ts",
     "migrate": "npx ts-node migrate.ts",
-    "test-lichess": "node test-lichess.js"
+    "test-lichess": "node test-lichess.js",
+    "debug-games": "node debug-lichess-games.js"
   },
   "keywords": [],
   "author": "",

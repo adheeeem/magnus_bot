@@ -151,11 +151,23 @@ export async function handleZuri(ctx: Context) {
                     const data = await gamesRes.json();
                     games = data.games || [];
                 } else {
-                    // Lichess API
-                    const now = Date.now();
-                    const oneMonthAgo = now - (30 * 24 * 60 * 60 * 1000);
-                    const lichessGames = await fetchLichessGames(chessUsername, oneMonthAgo, now);
+                    // Lichess API - use proper date filtering
+                    let sinceTimestamp: number;
+                    let untilTimestamp: number = Date.now();
+                    
+                    if (option === 'bugun') {
+                        // For today, get start of day in Tajikistan time
+                        sinceTimestamp = startDate.getTime();
+                        console.log(`[Debug] Lichess today filter: ${new Date(sinceTimestamp).toISOString()} to ${new Date(untilTimestamp).toISOString()}`);
+                    } else {
+                        // For monthly, get start of month in Tajikistan time  
+                        sinceTimestamp = startDate.getTime();
+                        console.log(`[Debug] Lichess monthly filter: ${new Date(sinceTimestamp).toISOString()} to ${new Date(untilTimestamp).toISOString()}`);
+                    }
+                    
+                    const lichessGames = await fetchLichessGames(chessUsername, sinceTimestamp, untilTimestamp);
                     games = lichessGames || [];
+                    console.log(`[Debug] Fetched ${games.length} Lichess games for ${chessUsername} from ${new Date(sinceTimestamp).toISOString()}`);
                 }
 
                 // Process each game
@@ -165,8 +177,13 @@ export async function handleZuri(ctx: Context) {
                     if (platform === 'chess.com') {
                         gameEndTime = new Date(game.end_time * 1000);
                     } else {
-                        gameEndTime = new Date(game.lastMoveAt);
+                        // For Lichess, use lastMoveAt if available, otherwise createdAt
+                        // lastMoveAt is when the game actually ended
+                        const timestamp = game.lastMoveAt || game.createdAt;
+                        gameEndTime = new Date(timestamp);
                     }
+
+                    console.log(`[Debug] Processing ${platform} game for ${chessUsername}: ${gameEndTime.toISOString()}`);
 
                     // Convert game end time to Tajikistan time for comparison
                     const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
