@@ -34,6 +34,7 @@ It helps a small community track their **Chess.com** and **Lichess** progress wi
 - ⏰ **Daily Reset**: Championships awarded at 23:55 Tajikistan time
 - 📊 **Requirements**: Minimum 3 games to qualify for daily championship
 - 🏆 **Ongoing Competition**: Track your progress with `/standings`
+- ⚖️ **Fair Ranking**: Weighted score system rewards both skill and game volume
 
 ### Multi-Language Support
 - 🇺🇸 English

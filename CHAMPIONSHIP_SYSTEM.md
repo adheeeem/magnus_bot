@@ -20,8 +20,19 @@ Magnus Bot now features a **Daily Championship System** that rewards the top pla
 
 ### Qualification Requirements
 - Minimum **3 games** played on the day
-- Rankings based on **win rate** (ties broken by total wins)
+- Rankings based on **weighted score** (Win Rate × √(Games) × 100)
 - Includes games from both Chess.com and Lichess
+
+### Ranking System
+The bot uses a **Weighted Score System** that's fair to all playing styles:
+- **Formula**: `Weighted Score = Win Rate × √(Games Played) × 100`
+- **Benefits**: Rewards both skill (win rate) and activity (game volume)
+- **Examples**:
+  - Player A: 3W-0L (100% win rate) = 173.2 score
+  - Player B: 9W-1L (90% win rate) = 284.6 score ← **Wins!**
+  - Player C: 15W-15L (50% win rate) = 274.0 score
+
+This system ensures that playing more games is rewarded, but skill still matters most.
 
 ## Bot Commands
 
@@ -110,11 +121,11 @@ npm run test-championship
 Shows today's top players - Top 3 earn championship points!
 
 🏆 Daily Championship: Top 3 earn points at day end!
-Points: 🥇300, 🥈200, 🥉100 | Need 3+ games
+Weighted Score = Win Rate × √(Games) × 100 | Need 3+ games
 
-🥇 alice: 85.7% (W: 6 L: 1) [♟️4 🏰3] [150pts]
-🥈 bob: 80.0% (W: 4 L: 1) [♟️3 🏰2] [300pts]
-🥉 charlie: 75.0% (W: 3 L: 1) [♟️4 🏰0] [0pts]
+🥇 alice: 284.6 score (90.0% • 10g) [♟️6 🏰4] [150pts]
+🥈 bob: 274.0 score (50.0% • 30g) [♟️18 🏰12] [300pts]
+🥉 charlie: 268.4 score (60.0% • 20g) [♟️12 🏰8] [0pts]
 
 Use /standings to see championship standings
 ```

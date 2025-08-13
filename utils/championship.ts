@@ -30,6 +30,7 @@ export interface PlayerDayStats {
   losses: number;
   totalGames: number;
   winRate: number;
+  weightedScore: number;
   chesscomGames: number;
   lichessGames: number;
 }
@@ -137,6 +138,7 @@ export async function getTodaysLeaderboard(date: Date): Promise<PlayerDayStats[]
       losses: 0,
       totalGames: 0,
       winRate: 0,
+      weightedScore: 0,
       chesscomGames: 0,
       lichessGames: 0
     });
@@ -166,9 +168,14 @@ export async function getTodaysLeaderboard(date: Date): Promise<PlayerDayStats[]
   return [...playerStats.values()]
     .filter(player => player.totalGames >= 3)
     .sort((a, b) => {
+      if (b.weightedScore !== a.weightedScore) {
+        return b.weightedScore - a.weightedScore;
+      }
+      // Tiebreaker: higher win rate wins
       if (b.winRate !== a.winRate) {
         return b.winRate - a.winRate;
       }
+      // Final tiebreaker: more wins
       return b.wins - a.wins;
     });
 }
@@ -392,5 +399,10 @@ function updatePlayerStats(username: string, { wins, losses }: { wins: number; l
     stats.losses += losses;
     stats.totalGames = stats.wins + stats.losses;
     stats.winRate = stats.totalGames > 0 ? (stats.wins / stats.totalGames) * 100 : 0;
+    
+    // Calculate weighted score: Win Rate × √(Games Played) × Weight Factor
+    const WEIGHT_FACTOR = 100;
+    stats.weightedScore = stats.totalGames >= 3 ? 
+      (stats.winRate / 100) * Math.sqrt(stats.totalGames) * WEIGHT_FACTOR : 0;
   }
 }

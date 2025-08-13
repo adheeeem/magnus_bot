@@ -9,6 +9,7 @@ interface PlayerStats {
     losses: number;
     totalGames: number;
     winRate: number;
+    weightedScore: number;
     chesscomGames: number;
     lichessGames: number;
 }
@@ -35,6 +36,11 @@ function getCommandHelp(): string {
         "• Daily awards: 🥇300pts, 🥈200pts, 🥉100pts",
         "• Need 3+ games to qualify for daily championship",
         "• Points awarded daily at 23:55 Tajikistan time",
+        "",
+        "📊 Ranking System:",
+        "• Weighted Score = Win Rate × √(Games) × 100",
+        "• Rewards both skill and game volume",
+        "• Fair to all playing styles",
         "",
         "Use /standings to see championship standings!",
         "Use any /top command to see the corresponding leaderboard!"
@@ -86,6 +92,7 @@ export async function handleZuri(ctx: Context) {
                 losses: 0,
                 totalGames: 0,
                 winRate: 0,
+                weightedScore: 0,
                 chesscomGames: 0,
                 lichessGames: 0
             });
@@ -159,12 +166,17 @@ export async function handleZuri(ctx: Context) {
             }
         }));
 
-        // Sort players by win rate
+        // Sort players by weighted score (fairest ranking system)
         const sortedPlayers = [...playerStats.values()]
             .sort((a, b) => {
+                if (b.weightedScore !== a.weightedScore) {
+                    return b.weightedScore - a.weightedScore;
+                }
+                // Tiebreaker: higher win rate wins
                 if (b.winRate !== a.winRate) {
                     return b.winRate - a.winRate;
                 }
+                // Final tiebreaker: more wins
                 return b.wins - a.wins;
             })
             .filter(player => player.totalGames >= 3);
@@ -189,8 +201,8 @@ export async function handleZuri(ctx: Context) {
             // Check if this player is tied with the previous player
             if (i > 0) {
                 const prevPlayer = sortedPlayers[i - 1];
-                // Players are truly tied only if they have same win rate AND same wins
-                const isTied = (player.winRate === prevPlayer.winRate && player.wins === prevPlayer.wins);
+                // Players are truly tied only if they have same weighted score
+                const isTied = Math.abs(player.weightedScore - prevPlayer.weightedScore) < 0.01; // Account for floating point precision
                 
                 // If not tied, increment rank by 1 (consecutive ranking)
                 if (!isTied) {
@@ -203,7 +215,7 @@ export async function handleZuri(ctx: Context) {
             const scoreDisplay = championshipScore > 0 ? ` [${championshipScore}pts]` : '';
             
             playerLines.push(
-                `${getPositionEmoji(currentRank)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses}) [♟️${player.chesscomGames} 🏰${player.lichessGames}]${scoreDisplay}`
+                `${getPositionEmoji(currentRank)} ${player.username}: ${player.weightedScore.toFixed(1)} score (${player.winRate.toFixed(1)}% • ${player.totalGames}g) [♟️${player.chesscomGames} 🏰${player.lichessGames}]${scoreDisplay}`
             );
         }
 
@@ -216,7 +228,7 @@ export async function handleZuri(ctx: Context) {
         // Add championship info for daily leaderboards
         if (option === 'bugun') {
             response.push("🏆 Daily Championship: Top 3 earn points at day end!");
-            response.push("Points: 🥇300, 🥈200, 🥉100 | Need 3+ games");
+            response.push("Weighted Score = Win Rate × √(Games) × 100 | Need 3+ games");
             response.push("");
         }
         
@@ -280,6 +292,11 @@ function updatePlayerStats(username: string, { wins, losses }: { wins: number; l
         stats.losses += losses;
         stats.totalGames = stats.wins + stats.losses;
         stats.winRate = stats.totalGames > 0 ? (stats.wins / stats.totalGames) * 100 : 0;
+        
+        // Calculate weighted score: Win Rate × √(Games Played) × Weight Factor
+        const WEIGHT_FACTOR = 100;
+        stats.weightedScore = stats.totalGames >= 3 ? 
+            (stats.winRate / 100) * Math.sqrt(stats.totalGames) * WEIGHT_FACTOR : 0;
     }
 }
 
