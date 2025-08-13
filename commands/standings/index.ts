@@ -41,7 +41,7 @@ async function showChampionshipStandings(ctx: Context) {
   userScores.forEach((user, index) => {
     const position = index + 1;
     const emoji = getPositionEmoji(position);
-    message += `${emoji} @${user.telegram_username}: ${user.total_score} points\n`;
+    message += `${emoji} ${user.telegram_username}: ${user.total_score} points\n`;
   });
 
   message += "\n📊 Daily points: 🥇300, 🥈200, 🥉100";
@@ -71,14 +71,14 @@ async function showRecentChampions(ctx: Context) {
     });
     
     message += `📅 ${date}:\n`;
-    message += `🥇 @${champion.first_place} (${champion.win_rate_first.toFixed(1)}%)\n`;
+    message += `🥇 ${champion.first_place} (${champion.win_rate_first.toFixed(1)}%)\n`;
     
     if (champion.second_place) {
-      message += `🥈 @${champion.second_place} (${champion.win_rate_second?.toFixed(1)}%)\n`;
+      message += `🥈 ${champion.second_place} (${champion.win_rate_second?.toFixed(1)}%)\n`;
     }
     
     if (champion.third_place) {
-      message += `🥉 @${champion.third_place} (${champion.win_rate_third?.toFixed(1)}%)\n`;
+      message += `🥉 ${champion.third_place} (${champion.win_rate_third?.toFixed(1)}%)\n`;
     }
     
     message += "\n";

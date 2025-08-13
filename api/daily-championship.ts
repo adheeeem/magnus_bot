@@ -82,14 +82,14 @@ function formatChampionshipMessage(championData: any, leaderboard: any[]): strin
   
   // First place
   const first = leaderboard[0];
-  message += `🥇 CHAMPION: @${championData.first_place}\n`;
+  message += `🥇 CHAMPION: ${championData.first_place}\n`;
   message += `   Win Rate: ${first.winRate.toFixed(1)}% (${first.wins}W-${first.losses}L)\n`;
   message += `   Awarded: +300 points 🎉\n\n`;
   
   // Second place
   if (championData.second_place && leaderboard[1]) {
     const second = leaderboard[1];
-    message += `🥈 Runner-up: @${championData.second_place}\n`;
+    message += `🥈 Runner-up: ${championData.second_place}\n`;
     message += `   Win Rate: ${second.winRate.toFixed(1)}% (${second.wins}W-${second.losses}L)\n`;
     message += `   Awarded: +200 points\n\n`;
   }
@@ -97,7 +97,7 @@ function formatChampionshipMessage(championData: any, leaderboard: any[]): strin
   // Third place
   if (championData.third_place && leaderboard[2]) {
     const third = leaderboard[2];
-    message += `🥉 Third place: @${championData.third_place}\n`;
+    message += `🥉 Third place: ${championData.third_place}\n`;
     message += `   Win Rate: ${third.winRate.toFixed(1)}% (${third.wins}W-${third.losses}L)\n`;
     message += `   Awarded: +100 points\n\n`;
   }
