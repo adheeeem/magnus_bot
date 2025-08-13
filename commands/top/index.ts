@@ -131,9 +131,13 @@ export async function handleZuri(ctx: Context) {
             try {
                 // Prioritize Chess.com, fall back to Lichess
                 const chessUsername = userMappings.chess || userMappings.lichess;
-                if (!chessUsername) return;
+                if (!chessUsername) {
+                    console.log(`[Debug] Skipping ${tgUsername} - no chess username found`);
+                    return;
+                }
 
                 const platform = userMappings.chess ? 'chess.com' : 'lichess';
+                console.log(`[Debug] Processing ${tgUsername} -> ${chessUsername} on ${platform}`);
                 let games: any[] = [];
 
                 if (platform === 'chess.com') {
@@ -168,6 +172,21 @@ export async function handleZuri(ctx: Context) {
                     const lichessGames = await fetchLichessGames(chessUsername, sinceTimestamp, untilTimestamp);
                     games = lichessGames || [];
                     console.log(`[Debug] Fetched ${games.length} Lichess games for ${chessUsername} from ${new Date(sinceTimestamp).toISOString()}`);
+                    
+                    // Log first few games for debugging
+                    if (games.length > 0) {
+                        console.log(`[Debug] Sample Lichess games for ${chessUsername}:`);
+                        games.slice(0, 3).forEach((game: any, index: number) => {
+                            const gameTime = new Date(game.lastMoveAt || game.createdAt);
+                            console.log(`  Game ${index + 1}: ${game.id}`);
+                            console.log(`    Time: ${gameTime.toISOString()} (${gameTime.getTime()})`);
+                            console.log(`    Speed: ${game.speed}, Status: ${game.status}`);
+                            console.log(`    Players: ${game.players.white.user?.name} vs ${game.players.black.user?.name}`);
+                            console.log(`    Winner: ${game.winner || 'draw'}`);
+                        });
+                    } else {
+                        console.log(`[Debug] No games returned from Lichess API for ${chessUsername}`);
+                    }
                 }
 
                 // Process each game
@@ -183,7 +202,7 @@ export async function handleZuri(ctx: Context) {
                         gameEndTime = new Date(timestamp);
                     }
 
-                    console.log(`[Debug] Processing ${platform} game for ${chessUsername}: ${gameEndTime.toISOString()}`);
+                    console.log(`[Debug] Processing ${platform} game for ${chessUsername}: ${game.id || 'unknown'} at ${gameEndTime.toISOString()}`);
 
                     // Convert game end time to Tajikistan time for comparison
                     const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
@@ -192,10 +211,17 @@ export async function handleZuri(ctx: Context) {
                     if (option === 'bugun') {
                         const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
                         const todayDateStr = getTajikistanTime(now).toISOString().split('T')[0];
-                        if (gameDateStr !== todayDateStr) return;
+                        console.log(`[Debug] Date comparison for ${game.id || 'unknown'}: game=${gameDateStr}, today=${todayDateStr}`);
+                        if (gameDateStr !== todayDateStr) {
+                            console.log(`[Debug] Skipping game ${game.id || 'unknown'} - wrong date`);
+                            return;
+                        }
                     } else {
                         // Monthly filter by Tajikistan time
-                        if (gameEndTimeTajikistan < startDate) return;
+                        if (gameEndTimeTajikistan < startDate) {
+                            console.log(`[Debug] Skipping game ${game.id || 'unknown'} - before start date`);
+                            return;
+                        }
                     }
 
                     // Filter by game type if specified
@@ -207,6 +233,7 @@ export async function handleZuri(ctx: Context) {
                     }
 
                     if (option && ['blitz', 'bullet', 'rapid'].includes(option) && gameType !== option) {
+                        console.log(`[Debug] Skipping game ${game.id || 'unknown'} - wrong type: ${gameType} != ${option}`);
                         return;
                     }
 
@@ -221,6 +248,7 @@ export async function handleZuri(ctx: Context) {
                     }
 
                     const stats = processGame(game, chessUsername, platform);
+                    console.log(`[Debug] Game ${game.id || 'unknown'} processed - wins: ${stats.wins}, losses: ${stats.losses}`);
                     updatePlayerStats(chessUsername, stats, playerStats);
                 });
             } catch (error) {
