@@ -1,18 +1,6 @@
 import { Context } from "grammy";
 import { getAllUserMappings } from "../../utils/userMap";
-
-interface Game {
-    end_time: number;
-    time_class: string;
-    white: {
-        username: string;
-        result: string;
-    };
-    black: {
-        username: string;
-        result: string;
-    };
-}
+import { fetchLichessGames } from "../../utils/chessApis";
 
 interface PlayerStats {
     username: string;
@@ -89,14 +77,18 @@ export async function handleZuri(ctx: Context) {
 
         // Initialize stats for all players
         const playerStats = new Map<string, PlayerStats>();
-        for (const [tgUsername, chessUsername] of Object.entries(userMap)) {
-            playerStats.set(chessUsername, {
-                username: tgUsername,
-                wins: 0,
-                losses: 0,
-                totalGames: 0,
-                winRate: 0
-            });
+        for (const [tgUsername, userMappings] of Object.entries(userMap)) {
+            // Prioritize Chess.com, fall back to Lichess for now
+            const chessUsername = userMappings.chess || userMappings.lichess;
+            if (chessUsername) {
+                playerStats.set(chessUsername, {
+                    username: tgUsername,
+                    wins: 0,
+                    losses: 0,
+                    totalGames: 0,
+                    winRate: 0
+                });
+            }
         }
 
         const now = new Date();
@@ -135,26 +127,49 @@ export async function handleZuri(ctx: Context) {
         }
 
         // Fetch and process games for each player
-        await Promise.all(Object.values(userMap).map(async (chessUsername) => {
+        await Promise.all(Object.entries(userMap).map(async ([tgUsername, userMappings]) => {
             try {
-                // Get archives
-                const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
-                if (!archivesRes.ok) return;
+                // Prioritize Chess.com, fall back to Lichess
+                const chessUsername = userMappings.chess || userMappings.lichess;
+                if (!chessUsername) return;
 
-                const archives = await archivesRes.json();
-                const currentMonth = archives.archives[archives.archives.length - 1];
+                const platform = userMappings.chess ? 'chess.com' : 'lichess';
+                let games: any[] = [];
 
-                // Get games from current month
-                const gamesRes = await fetch(currentMonth);
-                if (!gamesRes.ok) return;
+                if (platform === 'chess.com') {
+                    // Get archives
+                    const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
+                    if (!archivesRes.ok) return;
 
-                const { games } = await gamesRes.json();
+                    const archives = await archivesRes.json();
+                    const currentMonth = archives.archives[archives.archives.length - 1];
+
+                    // Get games from current month
+                    const gamesRes = await fetch(currentMonth);
+                    if (!gamesRes.ok) return;
+
+                    const data = await gamesRes.json();
+                    games = data.games || [];
+                } else {
+                    // Lichess API
+                    const now = Date.now();
+                    const oneMonthAgo = now - (30 * 24 * 60 * 60 * 1000);
+                    const lichessGames = await fetchLichessGames(chessUsername, oneMonthAgo, now);
+                    games = lichessGames || [];
+                }
 
                 // Process each game
-                games.forEach((game: Game) => {
+                games.forEach((game: any) => {
+                    let gameEndTime: Date;
+
+                    if (platform === 'chess.com') {
+                        gameEndTime = new Date(game.end_time * 1000);
+                    } else {
+                        gameEndTime = new Date(game.lastMoveAt);
+                    }
+
                     // Convert game end time to Tajikistan time for comparison
-                    const gameEndTimeUTC = new Date(game.end_time * 1000);
-                    const gameEndTimeTajikistan = getTajikistanTime(gameEndTimeUTC);
+                    const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
 
                     // If 'bugun', compare full date string
                     if (option === 'bugun') {
@@ -167,24 +182,32 @@ export async function handleZuri(ctx: Context) {
                     }
 
                     // Filter by game type if specified
-                    if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
+                    let gameType: string;
+                    if (platform === 'chess.com') {
+                        gameType = game.time_class;
+                    } else {
+                        gameType = game.speed; // Lichess uses 'speed' field
+                    }
+
+                    if (option && ['blitz', 'bullet', 'rapid'].includes(option) && gameType !== option) {
                         return;
                     }
 
                     if (option === 'bugun') {
                         console.log('[Debug] Game time info:', {
                             player: chessUsername,
-                            gameEndUTC: gameEndTimeUTC.toISOString(),
+                            platform,
+                            gameEndUTC: gameEndTime.toISOString(),
                             gameEndTajikistan: gameEndTimeTajikistan.toISOString(),
                             isIncluded: gameEndTimeTajikistan >= startDate
                         });
                     }
 
-                    const stats = processGame(game, chessUsername);
+                    const stats = processGame(game, chessUsername, platform);
                     updatePlayerStats(chessUsername, stats, playerStats);
                 });
             } catch (error) {
-                console.error(`Error processing games for ${chessUsername}:`, error);
+                console.error(`Error processing games for ${tgUsername} (${userMappings.chess || userMappings.lichess}):`, error);
             }
         }));
 
@@ -247,20 +270,37 @@ export async function handleZuri(ctx: Context) {
     }
 }
 
-function processGame(game: Game, username: string): { wins: number; losses: number } {
-    const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
-    const playerResult = isWhite ? game.white.result : game.black.result;
-    const opponentResult = isWhite ? game.black.result : game.white.result;
-
+function processGame(game: any, username: string, platform: string): { wins: number; losses: number } {
     let wins = 0;
     let losses = 0;
 
-    if (playerResult === 'win' || opponentResult === 'resigned' ||
-        opponentResult === 'timeout' || opponentResult === 'abandoned') {
-        wins++;
-    } else if (opponentResult === 'win' || playerResult === 'resigned' ||
-        playerResult === 'timeout' || playerResult === 'abandoned') {
-        losses++;
+    if (platform === 'chess.com') {
+        const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
+        const playerResult = isWhite ? game.white.result : game.black.result;
+        const opponentResult = isWhite ? game.black.result : game.white.result;
+
+        if (playerResult === 'win' || opponentResult === 'resigned' ||
+            opponentResult === 'timeout' || opponentResult === 'abandoned') {
+            wins++;
+        } else if (opponentResult === 'win' || playerResult === 'resigned' ||
+            playerResult === 'timeout' || playerResult === 'abandoned') {
+            losses++;
+        }
+    } else {
+        // Lichess
+        const whitePlayer = game.players.white.user?.name?.toLowerCase();
+        const blackPlayer = game.players.black.user?.name?.toLowerCase();
+        const winner = game.winner;
+        const isWhite = whitePlayer === username.toLowerCase();
+        
+        if (winner) {
+            if ((isWhite && winner === 'white') || (!isWhite && winner === 'black')) {
+                wins++;
+            } else {
+                losses++;
+            }
+        }
+        // Draws are not counted as wins or losses
     }
 
     return { wins, losses };

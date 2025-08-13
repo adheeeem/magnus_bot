@@ -1,5 +1,5 @@
 import { CommandContext, GrammyError } from "grammy";
-import { getChessUsername } from "../../utils/supabase";
+import { getUserMappings } from "../../utils/supabase";
 import { startRegistrationFlow } from "../../utils/registration";
 
 export async function handleStart(ctx: CommandContext<any>) {
@@ -21,19 +21,25 @@ export async function handleStart(ctx: CommandContext<any>) {
     }
 
     // Check if user is already registered
-    const existingChessUsername = await getChessUsername(telegramUsername);
+    const existingMappings = await getUserMappings(telegramUsername);
     
-    if (existingChessUsername) {
+    if (existingMappings && (existingMappings.chess || existingMappings.lichess)) {
+      let platformsText = "";
+      if (existingMappings.chess) platformsText += `♟️ Chess.com: ${existingMappings.chess}\n`;
+      if (existingMappings.lichess) platformsText += `♟️ Lichess: ${existingMappings.lichess}\n`;
+      
       await ctx.reply(
         `👋 Хуш омадед! / Welcome back!\n\n` +
         `Шумо аллакай сабт шудаед:\n` +
         `You're already registered:\n` +
         `🎯 Telegram: @${telegramUsername}\n` +
-        `♟️ Chess.com: ${existingChessUsername}\n\n` +
+        platformsText + "\n" +
         `Фармонҳои дастрас / Available commands:\n` +
         `📊 /stats - Омори шахмат / View your chess statistics\n` +
         `🏆 /top - Рейтинг / See leaderboards\n` +
-        `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players`
+        `⚔️ /score @user1 @user2 - Муқоисаи бозигарон / Compare players\n\n` +
+        `Агар мехоҳед платформаи дигарро илова кунед, боз ҳам /start-ро истифода баред.\n` +
+        `If you want to add another platform, use /start again.`
       );
       return;
     }
@@ -43,12 +49,14 @@ export async function handleStart(ctx: CommandContext<any>) {
     
     await ctx.reply(
       "👋 Хуш омадед ба Magnus Bot! / Welcome to Magnus Bot!\n\n" +
-      "🎯 Биёед ҳисоби Chess.com-и худро сабт кунем.\n" +
-      "🎯 Let's register your Chess.com account.\n\n" +
-      "Лутфан номи корбарии Chess.com-и худро ворид кунед:\n" +
-      "Please enter your Chess.com username:\n" +
-      "(Бот мавҷудияти онро дар Chess.com тасдиқ мекунад)\n" +
-      "(The bot will verify it exists on Chess.com)"
+      "🎯 Биёед ҳисоби шахматии худро сабт кунем.\n" +
+      "🎯 Let's register your chess account.\n\n" +
+      "Кадом платформаро интихоб мекунед?\n" +
+      "Which platform would you like to choose?\n\n" +
+      "1️⃣ Chess.com\n" +
+      "2️⃣ Lichess\n\n" +
+      "Рақами интихобро ворид кунед (1 ё 2):\n" +
+      "Enter your choice number (1 or 2):"
     );
   } catch (err) {
     const errorContext = {

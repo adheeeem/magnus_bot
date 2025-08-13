@@ -13,7 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 export interface UserMapping {
   id?: number;
   telegram_username: string;
-  chess_username: string;
+  chess_username?: string;
+  lichess_username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -21,9 +22,15 @@ export interface UserMapping {
 // User operations
 export async function saveUserMapping(
   telegramUsername: string,
-  chessUsername: string
+  chessUsername?: string,
+  lichessUsername?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Validate that at least one chess platform username is provided
+    if (!chessUsername && !lichessUsername) {
+      return { success: false, error: 'At least one chess platform username is required' };
+    }
+
     // First check if user already exists
     const { data: existingUser } = await supabase
       .from('user_mappings')
@@ -33,12 +40,15 @@ export async function saveUserMapping(
 
     if (existingUser) {
       // Update existing user
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+      if (chessUsername) updateData.chess_username = chessUsername;
+      if (lichessUsername) updateData.lichess_username = lichessUsername;
+
       const { error } = await supabase
         .from('user_mappings')
-        .update({
-          chess_username: chessUsername,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('telegram_username', telegramUsername);
 
       if (error) {
@@ -47,14 +57,16 @@ export async function saveUserMapping(
       }
     } else {
       // Insert new user
+      const insertData: any = {
+        telegram_username: telegramUsername,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      if (chessUsername) insertData.chess_username = chessUsername;
+      if (lichessUsername) insertData.lichess_username = lichessUsername;
       const { error } = await supabase
         .from('user_mappings')
-        .insert({
-          telegram_username: telegramUsername,
-          chess_username: chessUsername,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Error saving user mapping:', error);
@@ -81,27 +93,71 @@ export async function getChessUsername(telegramUsername: string): Promise<string
       return null;
     }
 
-    return data.chess_username;
+    return data.chess_username || null;
   } catch (error) {
     console.error('Error fetching chess username:', error);
     return null;
   }
 }
 
-export async function getAllUserMappings(): Promise<Record<string, string>> {
+export async function getLichessUsername(telegramUsername: string): Promise<string | null> {
   try {
     const { data, error } = await supabase
       .from('user_mappings')
-      .select('telegram_username, chess_username');
+      .select('lichess_username')
+      .eq('telegram_username', telegramUsername)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data.lichess_username || null;
+  } catch (error) {
+    console.error('Error fetching lichess username:', error);
+    return null;
+  }
+}
+
+export async function getUserMappings(telegramUsername: string): Promise<{ chess: string | null; lichess: string | null } | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_mappings')
+      .select('chess_username, lichess_username')
+      .eq('telegram_username', telegramUsername)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return {
+      chess: data.chess_username || null,
+      lichess: data.lichess_username || null
+    };
+  } catch (error) {
+    console.error('Error fetching user mappings:', error);
+    return null;
+  }
+}
+
+export async function getAllUserMappings(): Promise<Record<string, { chess: string | null; lichess: string | null }>> {
+  try {
+    const { data, error } = await supabase
+      .from('user_mappings')
+      .select('telegram_username, chess_username, lichess_username');
 
     if (error || !data) {
       console.error('Error fetching all user mappings:', error);
       return {};
     }
 
-    const userMap: Record<string, string> = {};
+    const userMap: Record<string, { chess: string | null; lichess: string | null }> = {};
     data.forEach((mapping: any) => {
-      userMap[mapping.telegram_username] = mapping.chess_username;
+      userMap[mapping.telegram_username] = {
+        chess: mapping.chess_username || null,
+        lichess: mapping.lichess_username || null
+      };
     });
 
     return userMap;

@@ -4,14 +4,19 @@
 CREATE TABLE user_mappings (
     id BIGSERIAL PRIMARY KEY,
     telegram_username VARCHAR(255) NOT NULL UNIQUE,
-    chess_username VARCHAR(255) NOT NULL,
+    chess_username VARCHAR(255),
+    lichess_username VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT at_least_one_chess_platform CHECK (
+        chess_username IS NOT NULL OR lichess_username IS NOT NULL
+    )
 );
 
 -- Create indexes for better performance
 CREATE INDEX idx_user_mappings_telegram_username ON user_mappings(telegram_username);
 CREATE INDEX idx_user_mappings_chess_username ON user_mappings(chess_username);
+CREATE INDEX idx_user_mappings_lichess_username ON user_mappings(lichess_username);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE user_mappings ENABLE ROW LEVEL SECURITY;
