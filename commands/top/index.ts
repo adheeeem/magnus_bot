@@ -32,14 +32,6 @@ function getCommandHelp(): string {
     ].join('\n');
 }
 
-// Helper function to get Tajikistan time (GMT+5)
-function getTajikistanTime(date: Date): Date {
-    // Get the UTC timestamp
-    const utcTime = date.getTime();
-    // Convert to Tajikistan time (GMT+5)
-    return new Date(utcTime + (5 * 60 * 60 * 1000));
-}
-
 // Helper function to get start of day in Tajikistan time
 function getStartOfDayTajikistan(date: Date): Date {
     const tajikTime = getTajikistanTime(date);
@@ -75,20 +67,17 @@ export async function handleZuri(ctx: Context) {
             return ctx.reply("⚠️ No registered users found. Users can register with /start");
         }
 
-        // Initialize stats for all players
+        // Initialize stats for all players from both platforms
         const playerStats = new Map<string, PlayerStats>();
         for (const [tgUsername, userMappings] of Object.entries(userMap)) {
-            // Prioritize Chess.com, fall back to Lichess for now
-            const chessUsername = userMappings.chess || userMappings.lichess;
-            if (chessUsername) {
-                playerStats.set(chessUsername, {
-                    username: tgUsername,
-                    wins: 0,
-                    losses: 0,
-                    totalGames: 0,
-                    winRate: 0
-                });
-            }
+            // Initialize stats for this telegram user
+            playerStats.set(tgUsername, {
+                username: tgUsername,
+                wins: 0,
+                losses: 0,
+                totalGames: 0,
+                winRate: 0
+            });
         }
 
         const now = new Date();
@@ -129,130 +118,20 @@ export async function handleZuri(ctx: Context) {
         // Fetch and process games for each player
         await Promise.all(Object.entries(userMap).map(async ([tgUsername, userMappings]) => {
             try {
-                // Prioritize Chess.com, fall back to Lichess
-                const chessUsername = userMappings.chess || userMappings.lichess;
-                if (!chessUsername) {
-                    console.log(`[Debug] Skipping ${tgUsername} - no chess username found`);
-                    return;
+                console.log(`[Debug] Processing ${tgUsername} - Chess.com: ${userMappings.chess || 'none'}, Lichess: ${userMappings.lichess || 'none'}`);
+                
+                // Process Chess.com games if user has Chess.com account
+                if (userMappings.chess) {
+                    await processChessComGames(userMappings.chess, tgUsername, option, startDate, now, playerStats);
                 }
-
-                const platform = userMappings.chess ? 'chess.com' : 'lichess';
-                console.log(`[Debug] Processing ${tgUsername} -> ${chessUsername} on ${platform}`);
-                let games: any[] = [];
-
-                if (platform === 'chess.com') {
-                    // Get archives
-                    const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
-                    if (!archivesRes.ok) return;
-
-                    const archives = await archivesRes.json();
-                    const currentMonth = archives.archives[archives.archives.length - 1];
-
-                    // Get games from current month
-                    const gamesRes = await fetch(currentMonth);
-                    if (!gamesRes.ok) return;
-
-                    const data = await gamesRes.json();
-                    games = data.games || [];
-                } else {
-                    // Lichess API - use proper date filtering
-                    let sinceTimestamp: number;
-                    let untilTimestamp: number = Date.now();
-                    
-                    if (option === 'bugun') {
-                        // For today, get start of day in Tajikistan time
-                        sinceTimestamp = startDate.getTime();
-                        console.log(`[Debug] Lichess today filter: ${new Date(sinceTimestamp).toISOString()} to ${new Date(untilTimestamp).toISOString()}`);
-                    } else {
-                        // For monthly, get start of month in Tajikistan time  
-                        sinceTimestamp = startDate.getTime();
-                        console.log(`[Debug] Lichess monthly filter: ${new Date(sinceTimestamp).toISOString()} to ${new Date(untilTimestamp).toISOString()}`);
-                    }
-                    
-                    const lichessGames = await fetchLichessGames(chessUsername, sinceTimestamp, untilTimestamp);
-                    games = lichessGames || [];
-                    console.log(`[Debug] Fetched ${games.length} Lichess games for ${chessUsername} from ${new Date(sinceTimestamp).toISOString()}`);
-                    
-                    // Log first few games for debugging
-                    if (games.length > 0) {
-                        console.log(`[Debug] Sample Lichess games for ${chessUsername}:`);
-                        games.slice(0, 3).forEach((game: any, index: number) => {
-                            const gameTime = new Date(game.lastMoveAt || game.createdAt);
-                            console.log(`  Game ${index + 1}: ${game.id}`);
-                            console.log(`    Time: ${gameTime.toISOString()} (${gameTime.getTime()})`);
-                            console.log(`    Speed: ${game.speed}, Status: ${game.status}`);
-                            console.log(`    Players: ${game.players.white.user?.name} vs ${game.players.black.user?.name}`);
-                            console.log(`    Winner: ${game.winner || 'draw'}`);
-                        });
-                    } else {
-                        console.log(`[Debug] No games returned from Lichess API for ${chessUsername}`);
-                    }
+                
+                // Process Lichess games if user has Lichess account
+                if (userMappings.lichess) {
+                    await processLichessGames(userMappings.lichess, tgUsername, option, startDate, now, playerStats);
                 }
-
-                // Process each game
-                games.forEach((game: any) => {
-                    let gameEndTime: Date;
-
-                    if (platform === 'chess.com') {
-                        gameEndTime = new Date(game.end_time * 1000);
-                    } else {
-                        // For Lichess, use lastMoveAt if available, otherwise createdAt
-                        // lastMoveAt is when the game actually ended
-                        const timestamp = game.lastMoveAt || game.createdAt;
-                        gameEndTime = new Date(timestamp);
-                    }
-
-                    console.log(`[Debug] Processing ${platform} game for ${chessUsername}: ${game.id || 'unknown'} at ${gameEndTime.toISOString()}`);
-
-                    // Convert game end time to Tajikistan time for comparison
-                    const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
-
-                    // If 'bugun', compare full date string
-                    if (option === 'bugun') {
-                        const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
-                        const todayDateStr = getTajikistanTime(now).toISOString().split('T')[0];
-                        console.log(`[Debug] Date comparison for ${game.id || 'unknown'}: game=${gameDateStr}, today=${todayDateStr}`);
-                        if (gameDateStr !== todayDateStr) {
-                            console.log(`[Debug] Skipping game ${game.id || 'unknown'} - wrong date`);
-                            return;
-                        }
-                    } else {
-                        // Monthly filter by Tajikistan time
-                        if (gameEndTimeTajikistan < startDate) {
-                            console.log(`[Debug] Skipping game ${game.id || 'unknown'} - before start date`);
-                            return;
-                        }
-                    }
-
-                    // Filter by game type if specified
-                    let gameType: string;
-                    if (platform === 'chess.com') {
-                        gameType = game.time_class;
-                    } else {
-                        gameType = game.speed; // Lichess uses 'speed' field
-                    }
-
-                    if (option && ['blitz', 'bullet', 'rapid'].includes(option) && gameType !== option) {
-                        console.log(`[Debug] Skipping game ${game.id || 'unknown'} - wrong type: ${gameType} != ${option}`);
-                        return;
-                    }
-
-                    if (option === 'bugun') {
-                        console.log('[Debug] Game time info:', {
-                            player: chessUsername,
-                            platform,
-                            gameEndUTC: gameEndTime.toISOString(),
-                            gameEndTajikistan: gameEndTimeTajikistan.toISOString(),
-                            isIncluded: gameEndTimeTajikistan >= startDate
-                        });
-                    }
-
-                    const stats = processGame(game, chessUsername, platform);
-                    console.log(`[Debug] Game ${game.id || 'unknown'} processed - wins: ${stats.wins}, losses: ${stats.losses}`);
-                    updatePlayerStats(chessUsername, stats, playerStats);
-                });
+                
             } catch (error) {
-                console.error(`Error processing games for ${tgUsername} (${userMappings.chess || userMappings.lichess}):`, error);
+                console.error(`Error processing games for ${tgUsername}:`, error);
             }
         }));
 
@@ -368,4 +247,156 @@ function getPositionEmoji(position: number): string {
         case 3: return "🥉";
         default: return `${position}.`;
     }
-} 
+}
+
+// Helper function to process Chess.com games
+async function processChessComGames(
+    chessUsername: string,
+    tgUsername: string,
+    option: string,
+    startDate: Date,
+    now: Date,
+    playerStats: Map<string, PlayerStats>
+) {
+    try {
+        console.log(`[Debug] Processing Chess.com games for ${tgUsername} -> ${chessUsername}`);
+        
+        // Get archives
+        const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
+        if (!archivesRes.ok) {
+            console.log(`[Debug] Failed to fetch Chess.com archives for ${chessUsername}`);
+            return;
+        }
+
+        const archives = await archivesRes.json();
+        const currentMonth = archives.archives[archives.archives.length - 1];
+
+        // Get games from current month
+        const gamesRes = await fetch(currentMonth);
+        if (!gamesRes.ok) {
+            console.log(`[Debug] Failed to fetch Chess.com games for ${chessUsername}`);
+            return;
+        }
+
+        const data = await gamesRes.json();
+        const games = data.games || [];
+        console.log(`[Debug] Fetched ${games.length} Chess.com games for ${chessUsername}`);
+
+        // Process each game
+        games.forEach((game: any) => {
+            const gameEndTime = new Date(game.end_time * 1000);
+            const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
+
+            // Date filtering
+            if (option === 'bugun') {
+                const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
+                const todayDateStr = getTajikistanTime(now).toISOString().split('T')[0];
+                if (gameDateStr !== todayDateStr) return;
+            } else {
+                if (gameEndTimeTajikistan < startDate) return;
+            }
+
+            // Game type filtering
+            if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.time_class !== option) {
+                return;
+            }
+
+            const stats = processGame(game, chessUsername, 'chess.com');
+            updatePlayerStats(tgUsername, stats, playerStats);
+        });
+    } catch (error) {
+        console.error(`Error processing Chess.com games for ${tgUsername}:`, error);
+    }
+}
+
+// Helper function to process Lichess games
+async function processLichessGames(
+    lichessUsername: string,
+    tgUsername: string,
+    option: string,
+    startDate: Date,
+    now: Date,
+    playerStats: Map<string, PlayerStats>
+) {
+    try {
+        console.log(`[Debug] Processing Lichess games for ${tgUsername} -> ${lichessUsername}`);
+        
+        // Calculate date filtering
+        let sinceTimestamp: number;
+        let untilTimestamp: number = Date.now();
+        
+        if (option === 'bugun') {
+            sinceTimestamp = startDate.getTime();
+            console.log(`[Debug] Lichess today filter: ${new Date(sinceTimestamp).toISOString()} to ${new Date(untilTimestamp).toISOString()}`);
+        } else {
+            sinceTimestamp = startDate.getTime();
+            console.log(`[Debug] Lichess monthly filter: ${new Date(sinceTimestamp).toISOString()} to ${new Date(untilTimestamp).toISOString()}`);
+        }
+        
+        const games = await fetchLichessGames(lichessUsername, sinceTimestamp, untilTimestamp);
+        if (!games) {
+            console.log(`[Debug] No games returned from Lichess API for ${lichessUsername}`);
+            return;
+        }
+        
+        console.log(`[Debug] Fetched ${games.length} Lichess games for ${lichessUsername}`);
+        
+        // Log first few games for debugging
+        if (games.length > 0) {
+            console.log(`[Debug] Sample Lichess games for ${lichessUsername}:`);
+            games.slice(0, 3).forEach((game: any, index: number) => {
+                const gameTime = new Date(game.lastMoveAt || game.createdAt);
+                console.log(`  Game ${index + 1}: ${game.id}`);
+                console.log(`    Time: ${gameTime.toISOString()}`);
+                console.log(`    Speed: ${game.speed}, Status: ${game.status}`);
+                console.log(`    Players: ${game.players.white.user?.name} vs ${game.players.black.user?.name}`);
+                console.log(`    Winner: ${game.winner || 'draw'}`);
+            });
+        }
+
+        // Process each game
+        games.forEach((game: any) => {
+            const timestamp = game.lastMoveAt || game.createdAt;
+            const gameEndTime = new Date(timestamp);
+            const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
+
+            console.log(`[Debug] Processing Lichess game ${game.id} for ${lichessUsername} at ${gameEndTime.toISOString()}`);
+
+            // Date filtering
+            if (option === 'bugun') {
+                const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
+                const todayDateStr = getTajikistanTime(now).toISOString().split('T')[0];
+                console.log(`[Debug] Date comparison for ${game.id}: game=${gameDateStr}, today=${todayDateStr}`);
+                if (gameDateStr !== todayDateStr) {
+                    console.log(`[Debug] Skipping Lichess game ${game.id} - wrong date`);
+                    return;
+                }
+            } else {
+                if (gameEndTimeTajikistan < startDate) {
+                    console.log(`[Debug] Skipping Lichess game ${game.id} - before start date`);
+                    return;
+                }
+            }
+
+            // Game type filtering
+            if (option && ['blitz', 'bullet', 'rapid'].includes(option) && game.speed !== option) {
+                console.log(`[Debug] Skipping Lichess game ${game.id} - wrong type: ${game.speed} != ${option}`);
+                return;
+            }
+
+            const stats = processGame(game, lichessUsername, 'lichess');
+            console.log(`[Debug] Lichess game ${game.id} processed - wins: ${stats.wins}, losses: ${stats.losses}`);
+            updatePlayerStats(tgUsername, stats, playerStats);
+        });
+    } catch (error) {
+        console.error(`Error processing Lichess games for ${tgUsername}:`, error);
+    }
+}
+
+// Helper function to get Tajikistan time (GMT+5)
+function getTajikistanTime(date: Date): Date {
+    // Get the UTC timestamp
+    const utcTime = date.getTime();
+    // Convert to Tajikistan time (GMT+5)
+    return new Date(utcTime + (5 * 60 * 60 * 1000));
+}
