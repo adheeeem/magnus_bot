@@ -1,5 +1,15 @@
 // utils/chessApis.ts
 // Utility functions for fetching data from Chess.com and Lichess APIs
+//
+// LICHESS API AUTHENTICATION:
+// The Lichess API requires authentication for most user data endpoints.
+// While some calls may work without a token, rate limiting and reliability
+// are much better with a personal access token.
+//
+// To get a token:
+// 1. Visit https://lichess.org/account/oauth/token/create
+// 2. Create a Personal Access Token (no special scopes needed for basic stats)
+// 3. Set LICHESS_API_TOKEN environment variable
 
 export interface ChessComRating {
   last?: { rating: number };
@@ -109,8 +119,26 @@ export async function verifyChessComUser(username: string): Promise<boolean> {
 // Lichess API functions
 export async function fetchLichessStats(username: string): Promise<LichessStats | null> {
   try {
-    const response = await fetch(`https://lichess.org/api/user/${username}`);
-    if (!response.ok) return null;
+    const headers: Record<string, string> = {};
+    
+    // Add authorization header if token is available
+    if (process.env.LICHESS_API_TOKEN) {
+      headers['Authorization'] = `Bearer ${process.env.LICHESS_API_TOKEN}`;
+    }
+    
+    const response = await fetch(`https://lichess.org/api/user/${username}`, {
+      headers
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn('Lichess API: Unauthorized access. Consider adding LICHESS_API_TOKEN to environment variables.');
+      } else if (response.status === 429) {
+        console.warn('Lichess API: Rate limited. A LICHESS_API_TOKEN would help avoid this.');
+      }
+      return null;
+    }
+    
     return await response.json();
   } catch (error) {
     console.error('Error fetching Lichess stats:', error);
@@ -124,13 +152,25 @@ export async function fetchLichessGames(username: string, since?: number, until?
     if (since) url += `&since=${since}`;
     if (until) url += `&until=${until}`;
     
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/x-ndjson'
-      }
-    });
+    const headers: Record<string, string> = {
+      'Accept': 'application/x-ndjson'
+    };
     
-    if (!response.ok) return null;
+    // Add authorization header if token is available
+    if (process.env.LICHESS_API_TOKEN) {
+      headers['Authorization'] = `Bearer ${process.env.LICHESS_API_TOKEN}`;
+    }
+    
+    const response = await fetch(url, { headers });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn('Lichess API: Unauthorized access to games. Consider adding LICHESS_API_TOKEN to environment variables.');
+      } else if (response.status === 429) {
+        console.warn('Lichess API: Rate limited when fetching games. A LICHESS_API_TOKEN would help avoid this.');
+      }
+      return null;
+    }
     
     const text = await response.text();
     const games: LichessGame[] = [];
@@ -155,7 +195,16 @@ export async function fetchLichessGames(username: string, since?: number, until?
 
 export async function verifyLichessUser(username: string): Promise<boolean> {
   try {
-    const response = await fetch(`https://lichess.org/api/user/${username}`);
+    const headers: Record<string, string> = {};
+    
+    // Add authorization header if token is available
+    if (process.env.LICHESS_API_TOKEN) {
+      headers['Authorization'] = `Bearer ${process.env.LICHESS_API_TOKEN}`;
+    }
+    
+    const response = await fetch(`https://lichess.org/api/user/${username}`, {
+      headers
+    });
     return response.ok;
   } catch (error) {
     console.error('Error verifying Lichess user:', error);

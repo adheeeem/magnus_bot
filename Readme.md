@@ -50,7 +50,20 @@ BOT_TOKEN=123456:ABC‑DEF…
 # Supabase Configuration
 SUPABASE_URL=https://your-supabase-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Lichess API Token (optional, but recommended)
+LICHESS_API_TOKEN=lip_your_personal_token_here
 ```
+
+**Note about Lichess API Token:**
+While the Lichess API token is optional, it's **highly recommended** for reliable access to user stats and games. Without a token, some Lichess features may be limited or fail due to rate limiting.
+
+To get a Lichess API token:
+1. Visit https://lichess.org/account/oauth/token/create
+2. Create a Personal Access Token with these scopes:
+   - `Read preferences` (optional)
+   - No other special scopes needed for basic stats
+3. Add the token to your `.env` file as `LICHESS_API_TOKEN`
 
 ### 3 · Setup Database
 
@@ -78,6 +91,7 @@ npm run dev
    - `BOT_TOKEN` (your Telegram bot token)
    - `SUPABASE_URL` (your Supabase project URL)
    - `SUPABASE_ANON_KEY` (your Supabase anon key)
+   - `LICHESS_API_TOKEN` (your Lichess personal access token - optional but recommended)
 3. **Build Command** – leave *empty* (Vercel auto‑installs & transpiles TS).
 4. Click **Deploy**.
 5. Set the webhook once (replace `<project>` and region if needed):

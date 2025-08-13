@@ -42,7 +42,10 @@ Add to your `.env` file:
 BOT_TOKEN=your_telegram_bot_token
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key
+LICHESS_API_TOKEN=lip_your_lichess_token_here
 ```
+
+**Note**: The `LICHESS_API_TOKEN` is optional but highly recommended for reliable Lichess integration. See `LICHESS_TOKEN_SETUP.md` for detailed setup instructions.
 
 ### 3. Migration (Optional)
 To migrate existing users from the legacy userMap:
