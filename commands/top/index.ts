@@ -8,6 +8,8 @@ interface PlayerStats {
     losses: number;
     totalGames: number;
     winRate: number;
+    chesscomGames: number;
+    lichessGames: number;
 }
 
 const COMMAND_DESCRIPTIONS = {
@@ -76,7 +78,9 @@ export async function handleZuri(ctx: Context) {
                 wins: 0,
                 losses: 0,
                 totalGames: 0,
-                winRate: 0
+                winRate: 0,
+                chesscomGames: 0,
+                lichessGames: 0
             });
         }
 
@@ -115,6 +119,9 @@ export async function handleZuri(ctx: Context) {
             description = option ? COMMAND_DESCRIPTIONS[option as keyof typeof COMMAND_DESCRIPTIONS] : COMMAND_DESCRIPTIONS.default;
         }
 
+        // Track game counts by platform
+        const gameCounts = { chesscom: 0, lichess: 0 };
+
         // Fetch and process games for each player
         await Promise.all(Object.entries(userMap).map(async ([tgUsername, userMappings]) => {
             try {
@@ -122,12 +129,22 @@ export async function handleZuri(ctx: Context) {
                 
                 // Process Chess.com games if user has Chess.com account
                 if (userMappings.chess) {
-                    await processChessComGames(userMappings.chess, tgUsername, option, startDate, now, playerStats);
+                    const chesscomCount = await processChessComGames(userMappings.chess, tgUsername, option, startDate, now, playerStats);
+                    const stats = playerStats.get(tgUsername);
+                    if (stats) {
+                        stats.chesscomGames = chesscomCount;
+                    }
+                    gameCounts.chesscom += chesscomCount;
                 }
                 
                 // Process Lichess games if user has Lichess account
                 if (userMappings.lichess) {
-                    await processLichessGames(userMappings.lichess, tgUsername, option, startDate, now, playerStats);
+                    const lichessCount = await processLichessGames(userMappings.lichess, tgUsername, option, startDate, now, playerStats);
+                    const stats = playerStats.get(tgUsername);
+                    if (stats) {
+                        stats.lichessGames = lichessCount;
+                    }
+                    gameCounts.lichess += lichessCount;
                 }
                 
             } catch (error) {
@@ -173,7 +190,7 @@ export async function handleZuri(ctx: Context) {
             }
             
             playerLines.push(
-                `${getPositionEmoji(currentRank)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses})`
+                `${getPositionEmoji(currentRank)} ${player.username}: ${player.winRate.toFixed(1)}% (W: ${player.wins} L: ${player.losses}) [♟️${player.chesscomGames} 🏰${player.lichessGames}]`
             );
         }
 
@@ -257,7 +274,9 @@ async function processChessComGames(
     startDate: Date,
     now: Date,
     playerStats: Map<string, PlayerStats>
-) {
+): Promise<number> {
+    let processedGames = 0;
+    
     try {
         console.log(`[Debug] Processing Chess.com games for ${tgUsername} -> ${chessUsername}`);
         
@@ -265,7 +284,7 @@ async function processChessComGames(
         const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
         if (!archivesRes.ok) {
             console.log(`[Debug] Failed to fetch Chess.com archives for ${chessUsername}`);
-            return;
+            return 0;
         }
 
         const archives = await archivesRes.json();
@@ -275,7 +294,7 @@ async function processChessComGames(
         const gamesRes = await fetch(currentMonth);
         if (!gamesRes.ok) {
             console.log(`[Debug] Failed to fetch Chess.com games for ${chessUsername}`);
-            return;
+            return 0;
         }
 
         const data = await gamesRes.json();
@@ -303,10 +322,13 @@ async function processChessComGames(
 
             const stats = processGame(game, chessUsername, 'chess.com');
             updatePlayerStats(tgUsername, stats, playerStats);
+            processedGames++;
         });
     } catch (error) {
         console.error(`Error processing Chess.com games for ${tgUsername}:`, error);
     }
+    
+    return processedGames;
 }
 
 // Helper function to process Lichess games
@@ -317,7 +339,9 @@ async function processLichessGames(
     startDate: Date,
     now: Date,
     playerStats: Map<string, PlayerStats>
-) {
+): Promise<number> {
+    let processedGames = 0;
+    
     try {
         console.log(`[Debug] Processing Lichess games for ${tgUsername} -> ${lichessUsername}`);
         
@@ -336,7 +360,7 @@ async function processLichessGames(
         const games = await fetchLichessGames(lichessUsername, sinceTimestamp, untilTimestamp);
         if (!games) {
             console.log(`[Debug] No games returned from Lichess API for ${lichessUsername}`);
-            return;
+            return 0;
         }
         
         console.log(`[Debug] Fetched ${games.length} Lichess games for ${lichessUsername}`);
@@ -387,10 +411,13 @@ async function processLichessGames(
             const stats = processGame(game, lichessUsername, 'lichess');
             console.log(`[Debug] Lichess game ${game.id} processed - wins: ${stats.wins}, losses: ${stats.losses}`);
             updatePlayerStats(tgUsername, stats, playerStats);
+            processedGames++;
         });
     } catch (error) {
         console.error(`Error processing Lichess games for ${tgUsername}:`, error);
     }
+    
+    return processedGames;
 }
 
 // Helper function to get Tajikistan time (GMT+5)
