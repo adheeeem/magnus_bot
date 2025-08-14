@@ -124,11 +124,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const message = formatChampionshipMessage(championData, leaderboard);
     console.log('Championship message generated:', message);
     
-    // You can uncomment this to send to a specific chat ID
-    // const ANNOUNCEMENT_CHAT_ID = process.env.ANNOUNCEMENT_CHAT_ID;
-    // if (ANNOUNCEMENT_CHAT_ID) {
-    //   await bot.api.sendMessage(ANNOUNCEMENT_CHAT_ID, message);
-    // }
+    // Send announcement to the configured chat
+    const ANNOUNCEMENT_CHAT_ID = process.env.ANNOUNCEMENT_CHAT_ID;
+    if (!ANNOUNCEMENT_CHAT_ID) {
+      console.log('Warning: ANNOUNCEMENT_CHAT_ID not configured');
+    } else {
+      try {
+        await bot.api.sendMessage(ANNOUNCEMENT_CHAT_ID, message, { parse_mode: 'HTML' });
+        console.log('Championship announcement sent successfully');
+      } catch (error) {
+        console.error('Error sending championship announcement:', error);
+      }
+    }
 
     return res.status(200).json({ 
       success: true, 
