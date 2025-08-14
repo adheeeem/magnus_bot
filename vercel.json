@@ -1,24 +1,14 @@
 {
-  "version": 2,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/daily-championship.ts": {
       "maxDuration": 300
     }
   },
-  "routes": [
-    {
-      "src": "/webhook",
-      "dest": "api/webhook.ts"
-    },
-    {
-      "src": "/api/daily-championship",
-      "dest": "api/daily-championship.ts"
-    }
-  ],
   "crons": [
     {
       "path": "/api/daily-championship",
-      "schedule": "37 0 * * *"
+      "schedule": "45 0 * * *"
     }
   ]
 }
