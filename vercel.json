@@ -5,10 +5,16 @@
       "maxDuration": 300
     }
   },
+  "rewrites": [
+    {
+      "source": "/webhook",
+      "destination": "api/webhook.ts"
+    }
+  ],
   "crons": [
     {
       "path": "/api/daily-championship",
-      "schedule": "55 18 * * *"
+      "schedule": "50 18 * * *"
     }
   ]
 }
