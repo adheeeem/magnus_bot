@@ -214,7 +214,7 @@ export async function handleZuri(ctx: Context) {
             const championshipScore = scoresMap.get(player.username) || 0;
             
             playerLines.push(
-                `${getPositionEmoji(currentRank)} ${player.username}: ${player.weightedScore.toFixed(1)} [♟️${player.chesscomGames} 🏰${player.lichessGames}]`
+                `${getPositionEmoji(currentRank)} ${player.username}: ${player.weightedScore.toFixed(1)}`
             );
         }
 
