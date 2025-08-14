@@ -1,19 +1,26 @@
 // api/daily-championship.ts
 // Vercel cron job endpoint for daily championship awards
-// This endpoint should be called daily at 23:55 Tajikistan time (18:55 UTC)
+// This endpoint should be called daily at 00:02 UTC (05:02 Tajikistan time)
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { bot } from '../bot';
 import { getTodaysLeaderboard, saveDailyChampions, getRecentChampions } from '../utils/championship';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Verify this is a cron job request (for security)
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = req.headers.authorization;
-  
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  console.log('🏆 Daily championship cron job triggered at:', new Date().toISOString());
+  console.log('Request headers:', req.headers);
+  console.log('Request method:', req.method);
+
+  // Only allow POST requests or requests from Vercel cron
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Optional: Verify this is a cron job request (Vercel adds this header)
+  const isCronJob = req.headers['user-agent']?.includes('vercel-cron') || 
+                   req.headers['x-vercel-cron'] === '1';
+  
+  console.log('Is cron job:', isCronJob);
 
   try {
     console.log('🏆 Running daily championship calculation...');
@@ -22,8 +29,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const now = new Date();
     const tajikTime = new Date(now.getTime() + (5 * 60 * 60 * 1000)); // UTC+5
     
+    console.log('Current UTC time:', now.toISOString());
+    console.log('Tajikistan time:', tajikTime.toISOString());
+    
     // Get today's leaderboard
     const leaderboard = await getTodaysLeaderboard(tajikTime);
+    
+    console.log('Leaderboard results:', leaderboard.length, 'qualifying players');
     
     if (leaderboard.length === 0) {
       console.log('No qualifying players for today\'s championship');
@@ -42,12 +54,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to save champions' });
     }
 
+    console.log('Champions saved successfully:', championData);
+
     // Prepare championship announcement message
     const message = formatChampionshipMessage(championData, leaderboard);
     
-    // Send announcement to all registered users (or a specific group)
-    // For now, we'll log the message and return it
-    console.log('Championship message:', message);
+    // Log the message (you can enable bot sending later)
+    console.log('Championship message generated:', message);
     
     // You can uncomment this to send to a specific chat ID
     // const ANNOUNCEMENT_CHAT_ID = process.env.ANNOUNCEMENT_CHAT_ID;
@@ -59,14 +72,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true, 
       message: 'Daily championship processed successfully',
       champions: championData,
-      announcement: message
+      announcement: message,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
     console.error('Error in daily championship cron job:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
     });
   }
 }

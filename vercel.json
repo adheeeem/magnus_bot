@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/daily-championship.ts": {
+      "maxDuration": 300
+    }
+  },
   "routes": [
     {
       "src": "/webhook",
@@ -12,7 +17,7 @@
   "crons": [
     {
       "path": "/api/daily-championship",
-      "schedule": "3 0 * * *"
+      "schedule": "14 0 * * *"
     }
   ]
 }
