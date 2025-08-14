@@ -2,11 +2,7 @@
   "version": 2,
   "functions": {
     "api/daily-championship.ts": {
-      "maxDuration": 300,
-      "runtime": "nodejs18.x"
-    },
-    "api/webhook.ts": {
-      "runtime": "nodejs18.x"
+      "maxDuration": 300
     }
   },
   "routes": [
@@ -22,7 +18,7 @@
   "crons": [
     {
       "path": "/api/daily-championship",
-      "schedule": "36 0 * * *"
+      "schedule": "37 0 * * *"
     }
   ]
 }
