@@ -11,10 +11,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('🏆 Daily championship endpoint called at:', timestamp);
   console.log('Request method:', req.method);
   console.log('User-Agent:', req.headers['user-agent']);
-  console.log('All headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Validate cron request - Vercel cron jobs include a special authorization header
+  const authHeader = req.headers['authorization'];
+  const cronSecret = process.env.CRON_SECRET;
+  
+  if (cronSecret) {
+    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+      console.log('Unauthorized cron request - missing or invalid authorization');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  }
   
   // Check if this is a Vercel cron request
-  const isVercelCron = req.headers['user-agent']?.includes('vercel-cron');
+  const isVercelCron = req.headers['user-agent']?.includes('vercel-cron') || 
+                      req.headers['user-agent']?.includes('vercel') ||
+                      authHeader?.startsWith('Bearer');
   console.log('Is Vercel cron request:', isVercelCron);
 
   // Only allow GET and POST requests
@@ -43,7 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ 
         success: true, 
         message: 'No qualifying players today',
-        date: tajikTime.toISOString().split('T')[0]
+        date: tajikTime.toISOString().split('T')[0],
+        timestamp
       });
     }
 
@@ -74,7 +87,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: 'Daily championship processed successfully',
       champions: championData,
       announcement: message,
-      timestamp: new Date().toISOString()
+      timestamp,
+      cronJob: true
     });
 
   } catch (error) {
@@ -82,7 +96,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
+      timestamp,
+      stack: error instanceof Error ? error.stack : undefined
     });
   }
 }
