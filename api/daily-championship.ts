@@ -7,20 +7,21 @@ import { bot } from '../bot';
 import { getTodaysLeaderboard, saveDailyChampions, getRecentChampions } from '../utils/championship';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('🏆 Daily championship cron job triggered at:', new Date().toISOString());
-  console.log('Request headers:', req.headers);
+  const timestamp = new Date().toISOString();
+  console.log('🏆 Daily championship endpoint called at:', timestamp);
   console.log('Request method:', req.method);
+  console.log('User-Agent:', req.headers['user-agent']);
+  console.log('All headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Check if this is a Vercel cron request
+  const isVercelCron = req.headers['user-agent']?.includes('vercel-cron');
+  console.log('Is Vercel cron request:', isVercelCron);
 
-  // Only allow POST requests or requests from Vercel cron
+  // Only allow GET and POST requests
   if (req.method !== 'POST' && req.method !== 'GET') {
+    console.log('Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  // Optional: Verify this is a cron job request (Vercel adds this header)
-  const isCronJob = req.headers['user-agent']?.includes('vercel-cron') || 
-                   req.headers['x-vercel-cron'] === '1';
-  
-  console.log('Is cron job:', isCronJob);
 
   try {
     console.log('🏆 Running daily championship calculation...');

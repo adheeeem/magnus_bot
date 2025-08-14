@@ -17,7 +17,7 @@
   "crons": [
     {
       "path": "/api/daily-championship",
-      "schedule": "14 0 * * *"
+      "schedule": "26 0 * * *"
     }
   ]
 }
