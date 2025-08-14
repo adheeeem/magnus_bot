@@ -4,7 +4,10 @@
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { bot } from '../bot';
-import { getTodaysLeaderboard, saveDailyChampions, getRecentChampions } from '../utils/championship';
+import { getTodaysLeaderboard, saveDailyChampions } from '../utils/championship';
+import { PlayerStats, processChessComGames, processLichessGames } from '../utils/gameStats';
+import { getAllUserMappings } from '../utils/userMap';
+import { getStartOfDayTajikistan, getTajikistanTime } from '../utils/timeUtils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const timestamp = new Date().toISOString();
@@ -12,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('Request method:', req.method);
   console.log('User-Agent:', req.headers['user-agent']);
   
-  // Validate cron request - Vercel cron jobs include a special authorization header
+  // Validate cron request
   const authHeader = req.headers['authorization'];
   const cronSecret = process.env.CRON_SECRET;
   
@@ -40,13 +43,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Get today's date in Tajikistan time
     const now = new Date();
-    const tajikTime = new Date(now.getTime() + (5 * 60 * 60 * 1000)); // UTC+5
+    const tajikTime = getTajikistanTime(now);
     
     console.log('Current UTC time:', now.toISOString());
     console.log('Tajikistan time:', tajikTime.toISOString());
+
+    // Initialize player stats
+    const userMap = await getAllUserMappings();
+    const playerStats = new Map<string, PlayerStats>();
     
-    // Get today's leaderboard
-    const leaderboard = await getTodaysLeaderboard(tajikTime);
+    for (const [tgUsername] of Object.entries(userMap)) {
+      playerStats.set(tgUsername, {
+        username: tgUsername,
+        wins: 0,
+        losses: 0,
+        totalGames: 0,
+        winRate: 0,
+        weightedScore: 0,
+        chesscomGames: 0,
+        lichessGames: 0
+      });
+    }
+
+    // Get start of day in Tajikistan time
+    const startDate = getStartOfDayTajikistan(now);
+    
+    // Process games for each player
+    await Promise.all(Object.entries(userMap).map(async ([tgUsername, userMappings]) => {
+      try {
+        // Process Chess.com games
+        if (userMappings.chess) {
+          await processChessComGames(userMappings.chess, tgUsername, startDate, now, playerStats);
+        }
+        
+        // Process Lichess games
+        if (userMappings.lichess) {
+          await processLichessGames(userMappings.lichess, tgUsername, startDate, now, playerStats);
+        }
+      } catch (error) {
+        console.error(`Error processing games for ${tgUsername}:`, error);
+      }
+    }));
+
+    // Get qualifying players (3+ games)
+    const leaderboard = [...playerStats.values()]
+      .filter(player => player.totalGames >= 3)
+      .sort((a, b) => {
+        if (b.weightedScore !== a.weightedScore) {
+          return b.weightedScore - a.weightedScore;
+        }
+        if (b.winRate !== a.winRate) {
+          return b.winRate - a.winRate;
+        }
+        return b.wins - a.wins;
+      });
     
     console.log('Leaderboard results:', leaderboard.length, 'qualifying players');
     
@@ -72,8 +122,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Prepare championship announcement message
     const message = formatChampionshipMessage(championData, leaderboard);
-    
-    // Log the message (you can enable bot sending later)
     console.log('Championship message generated:', message);
     
     // You can uncomment this to send to a specific chat ID
@@ -102,7 +150,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-function formatChampionshipMessage(championData: any, leaderboard: any[]): string {
+function formatChampionshipMessage(championData: any, leaderboard: PlayerStats[]): string {
   const date = new Date(championData.date).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',

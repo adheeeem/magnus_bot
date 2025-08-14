@@ -291,30 +291,34 @@ async function processChessComGamesForDay(
   playerStats: Map<string, PlayerDayStats>
 ): Promise<void> {
   try {
+    console.log(`[Debug] Processing Chess.com games for ${tgUsername} -> ${chessUsername}`);
+    
+    // Get archives
     const archivesRes = await fetch(`https://api.chess.com/pub/player/${chessUsername}/games/archives`);
     if (!archivesRes.ok) return;
 
     const archives = await archivesRes.json();
     const currentMonth = archives.archives[archives.archives.length - 1];
-
+    
+    // Get games from current month
     const gamesRes = await fetch(currentMonth);
     if (!gamesRes.ok) return;
 
     const data = await gamesRes.json();
     const games = data.games || [];
+    console.log(`[Debug] Fetched ${games.length} Chess.com games for ${chessUsername}`);
 
     games.forEach((game: any) => {
       const gameEndTime = new Date(game.end_time * 1000);
       const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
-
-      // Check if game was played on the target date
       const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
       const targetDateStr = getTajikistanTime(endDate).toISOString().split('T')[0];
       
-      if (gameDateStr !== targetDateStr) return;
-
-      const stats = processGame(game, chessUsername, 'chess.com');
-      updatePlayerStats(tgUsername, stats, playerStats);
+      if (gameDateStr === targetDateStr) {
+        console.log(`[Debug] Found Chess.com game for ${tgUsername} at ${gameEndTime.toISOString()}`);
+        const stats = processGame(game, chessUsername, 'chess.com');
+        updatePlayerStats(tgUsername, stats, playerStats);
+      }
     });
   } catch (error) {
     console.error(`Error processing Chess.com games for ${tgUsername}:`, error);
@@ -330,25 +334,39 @@ async function processLichessGamesForDay(
   playerStats: Map<string, PlayerDayStats>
 ): Promise<void> {
   try {
+    console.log(`[Debug] Processing Lichess games for ${tgUsername} -> ${lichessUsername}`);
+    
+    // Convert dates to UTC timestamps
     const sinceTimestamp = startDate.getTime();
-    const untilTimestamp = endDate.getTime();
+    const untilTimestamp = endDate.getTime() + 24 * 60 * 60 * 1000; // Include full day
+    
+    console.log(`[Debug] Lichess date filter:`, {
+      start: new Date(sinceTimestamp).toISOString(),
+      end: new Date(untilTimestamp).toISOString()
+    });
     
     const games = await fetchLichessGames(lichessUsername, sinceTimestamp, untilTimestamp);
-    if (!games) return;
+    if (!games) {
+      console.log(`[Debug] No games returned from Lichess API for ${lichessUsername}`);
+      return;
+    }
+    
+    console.log(`[Debug] Fetched ${games.length} Lichess games for ${lichessUsername}`);
 
+    // Process each game
     games.forEach((game: any) => {
       const timestamp = game.lastMoveAt || game.createdAt;
       const gameEndTime = new Date(timestamp);
       const gameEndTimeTajikistan = getTajikistanTime(gameEndTime);
-
-      // Check if game was played on the target date
       const gameDateStr = gameEndTimeTajikistan.toISOString().split('T')[0];
       const targetDateStr = getTajikistanTime(endDate).toISOString().split('T')[0];
-      
-      if (gameDateStr !== targetDateStr) return;
 
-      const stats = processGame(game, lichessUsername, 'lichess');
-      updatePlayerStats(tgUsername, stats, playerStats);
+      if (gameDateStr === targetDateStr) {
+        console.log(`[Debug] Processing Lichess game ${game.id} for ${lichessUsername}`);
+        const stats = processGame(game, lichessUsername, 'lichess');
+        console.log(`[Debug] Game ${game.id} stats: wins=${stats.wins}, losses=${stats.losses}`);
+        updatePlayerStats(tgUsername, stats, playerStats);
+      }
     });
   } catch (error) {
     console.error(`Error processing Lichess games for ${tgUsername}:`, error);
